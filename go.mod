@@ -5,9 +5,11 @@ go 1.20
 require (
 	github.com/docker/cli v25.0.1+incompatible
 	github.com/docker/docker v25.0.1+incompatible
+	github.com/docker/go-units v0.5.0
 	github.com/moby/buildkit v0.12.4
 	github.com/onsi/ginkgo/v2 v2.15.0
 	github.com/onsi/gomega v1.31.1
+	github.com/pkg/errors v0.9.1
 	github.com/thediveo/fdooze v0.3.1
 	github.com/thediveo/success v1.0.2
 	golang.org/x/exp v0.0.0-20240119083558-1b970713d09a
@@ -21,7 +23,6 @@ require (
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/distribution/reference v0.5.0 // indirect
 	github.com/docker/go-connections v0.5.0 // indirect
-	github.com/docker/go-units v0.5.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
@@ -40,7 +41,6 @@ require (
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0-rc3 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect

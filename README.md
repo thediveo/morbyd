@@ -118,18 +118,6 @@ battle-proven tools for using Docker images and containers in Go tests?
 policy](https://golang.org/doc/devel/release.html#policy), that is, major
 versions _N_ and _N_-1 (where _N_ is the current major version).
 
-## Hacking It
-
-This project comes with comprehensive unit tests, also covering leak checks
-using Gomega's
-[`gleak`](https://onsi.github.io/gomega/#codegleakcode-finding-leaked-goroutines)
-package.
-
-> **Note:** do **not run parallel tests** for multiple packages. `make test`
-> ensures to run all package tests always sequentially, but in case you run `go
-test` yourself, please don't forget `-p 1` when testing multiple packages in
-> one, _erm_, go.
-
 ## Contributing
 
 Please see [CONTRIBUTING.md](CONTRIBUTING.md).
@@ -138,3 +126,19 @@ Please see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 `morbyd` is Copyright 2024 Harald Albrecht, and licensed under the Apache
 License, Version 2.0.
+
+The package `github.com/thediveo/morbyd/run/dockercli` is [Copyright 2013-2017
+Docker, Inc.](https://github.com/moby/moby/blob/v25.0.1/LICENSE) and licensed
+under the Apache License Version 2.0, with the elements listed below coming from
+the [github.com/docker/cli](https://github.com/docker/cli) module in order to
+work around import dependency versioning problems due to `@docker/cli` using a
+managed `vendor/` directory, but not providing a `go.mod` and the associated
+guarantees:
+- [opts/mount.go](https://github.com/docker/cli/blob/v25.0.1/opts/mount.go);
+  removed the logrus dependency.
+- [opts/network.go](https://github.com/docker/cli/blob/v25.0.1/opts/network.go)
+- a subset of
+  [cli/compose/types/types.go](https://github.com/docker/cli/blob/v25.0.1/cli/compose/types/types.go):
+  type `ServiceVolumeConfig`, with direct dependency types `ServiceVolumeBind`,
+  `ServiceVolumeVolume`, `ServiceVolumeTmpfs`, and `ServiceVolumeCluster`.
+- [cli/compose/loader/volume.go](https://github.com/docker/cli/blob/v25.0.1/cli/compose/loader/volume.go)
