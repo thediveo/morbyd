@@ -20,7 +20,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/docker/cli/cli/compose/loader"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
@@ -288,7 +287,7 @@ func WithPIDMode(mode string) Opt {
 //
 // [Volumes]: https://docs.docker.com/storage/volumes/
 func WithVolume(vol string) Opt {
-	parsedVol, err := loader.ParseVolume(vol)
+	parsedVol, err := dockercli.ParseVolume(vol)
 	if err != nil {
 		return func(o *Options) error {
 			return fmt.Errorf("malformed WithVolume parameter %q, reason: %w",
