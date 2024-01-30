@@ -20,13 +20,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/docker/cli/cli/compose/loader"
-	cliopts "github.com/docker/cli/opts"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/strslice"
 	lbls "github.com/thediveo/morbyd/labels"
+	"github.com/thediveo/morbyd/run/dockercli"
 	"github.com/thediveo/morbyd/strukt"
 	"golang.org/x/exp/maps"
 )
@@ -288,7 +287,7 @@ func WithPIDMode(mode string) Opt {
 //
 // [Volumes]: https://docs.docker.com/storage/volumes/
 func WithVolume(vol string) Opt {
-	parsedVol, err := loader.ParseVolume(vol)
+	parsedVol, err := dockercli.ParseVolume(vol)
 	if err != nil {
 		return func(o *Options) error {
 			return fmt.Errorf("malformed WithVolume parameter %q, reason: %w",
@@ -343,7 +342,7 @@ func bindVolumeToBind(vol string) string {
 func WithMount(mnt string) Opt {
 	return func(o *Options) error {
 		// Let's do a dry run on this single parameter first...
-		dry := cliopts.MountOpt{}
+		dry := dockercli.MountOpt{}
 		if err := dry.Set(mnt); err != nil { // ...actually an "add"
 			return fmt.Errorf("invalid WithMount parameter, reason: %w",
 				err)
@@ -462,7 +461,7 @@ func WithConsoleSize(width, height uint) Opt {
 // configures the Linux kernel net namespace to use.
 func WithNetwork(net string) Opt {
 	return func(o *Options) error {
-		dry := cliopts.NetworkOpt{}
+		dry := dockercli.NetworkOpt{}
 		if err := dry.Set(net); err != nil {
 			return fmt.Errorf("malformed WithNetwork parameter %q, reason: %s",
 				net, err)
