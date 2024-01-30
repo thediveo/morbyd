@@ -1,0 +1,7 @@
+# A comment /foobar
+
+# cf. https://docs.docker.com/build/building/context/#dockerignore-files
+
+foo
+/bar
+baz*
