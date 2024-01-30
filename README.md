@@ -128,10 +128,10 @@ Please see [CONTRIBUTING.md](CONTRIBUTING.md).
 License, Version 2.0.
 
 The package `github.com/thediveo/morbyd/run/dockercli` is [Copyright 2013-2017
-Docker, Inc.](https://github.com/moby/moby/blob/v25.0.1/LICENSE), with the
-elements listed below coming from the
-[github.com/docker/cli](https://github.com/docker/cli) module in order to work
-around import dependency versioning problems due to `@docker/cli` using a
+Docker, Inc.](https://github.com/moby/moby/blob/v25.0.1/LICENSE) and licensed
+under the Apache License Version 2.0, with the elements listed below coming from
+the [github.com/docker/cli](https://github.com/docker/cli) module in order to
+work around import dependency versioning problems due to `@docker/cli` using a
 managed `vendor/` directory, but not providing a `go.mod` and the associated
 guarantees:
 - [opts/mount.go](https://github.com/docker/cli/blob/v25.0.1/opts/mount.go);
