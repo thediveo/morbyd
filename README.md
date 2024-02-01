@@ -1,3 +1,5 @@
+<img alt="lxkns logo" align="right" width="200" src="docs/morbyd.png">
+
 # `morbyd`
 
 [![PkgGoDev](https://img.shields.io/badge/-reference-blue?logo=go&logoColor=white&labelColor=505050)](https://pkg.go.dev/github.com/thediveo/morbyd)
