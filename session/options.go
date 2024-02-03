@@ -20,6 +20,7 @@ import (
 
 	"github.com/docker/docker/client"
 	lbls "github.com/thediveo/morbyd/labels"
+	"github.com/thediveo/morbyd/moby"
 )
 
 // Opt is a configuration option for creating sessions using
@@ -38,6 +39,10 @@ type Options struct {
 	// added to the session labels in order to automatically attach it to newly
 	// created containers and networks.
 	AutoCleaningLabel string
+
+	// A function supplied by a test option to wrap the Docker client with
+	// something else, such as a mock, double, or whatever you wanna call it.
+	Wrapper func(moby.Client) moby.Client
 }
 
 // WithAutoCleaning enables autocleaning containers and networks before and

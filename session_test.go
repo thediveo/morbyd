@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/client"
+	"go.uber.org/mock/gomock"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -48,10 +49,12 @@ var _ = Describe("sessions", func() {
 			MatchRegexp(`cannot create new test session.*label must be in format`)))
 	})
 
-	When("auto-cleaning", func() {
+	FWhen("auto-cleaning", func() {
 
 		It("skips auto-cleaning without a label set", Serial, func(ctx context.Context) {
-			sess := Successful(NewSession(ctx))
+			ctrl := gomock.NewController(GinkgoT())
+			sess := Successful(NewSession(ctx,
+				WithMockController(ctrl)))
 			DeferCleanup(func(ctx context.Context) {
 				sess.Close(ctx)
 			})

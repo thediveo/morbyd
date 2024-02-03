@@ -23,6 +23,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
+	"github.com/thediveo/morbyd/moby"
 	"github.com/thediveo/morbyd/session"
 )
 
@@ -31,7 +32,7 @@ import (
 // and networks.
 type Session struct {
 	opts session.Options
-	moby *client.Client
+	moby moby.Client
 }
 
 // NewSession creates a new Docker client and test session, returning a Session
@@ -61,12 +62,15 @@ func NewSession(ctx context.Context, opts ...session.Opt) (*Session, error) {
 		return nil, err
 	}
 	s.moby = moby
+	if s.opts.Wrapper != nil {
+		s.moby = s.opts.Wrapper(s.moby)
+	}
 	s.AutoClean(ctx)
 	return s, nil
 }
 
 // Client returns the Docker client used in this test session.
-func (s *Session) Client() *client.Client { return s.moby }
+func (s *Session) Client() moby.Client { return s.moby }
 
 // Close removes left-over containers and networks if auto-cleaning has been
 // enabled, and then closes idle HTTP connections to the Docker daemon.
