@@ -16,10 +16,12 @@ package morbyd
 
 import (
 	"context"
+	"errors"
 	"io"
 	"os"
 	"time"
 
+	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"go.uber.org/mock/gomock"
 
@@ -49,7 +51,7 @@ var _ = Describe("sessions", func() {
 			MatchRegexp(`cannot create new test session.*label must be in format`)))
 	})
 
-	FWhen("auto-cleaning", func() {
+	When("auto-cleaning", func() {
 
 		It("skips auto-cleaning without a label set", Serial, func(ctx context.Context) {
 			ctrl := gomock.NewController(GinkgoT())
@@ -72,6 +74,44 @@ var _ = Describe("sessions", func() {
 			sess.AutoClean(ctx)
 			Consistently(cntr.Refresh).WithContext(ctx).Within(3 * time.Second).ProbeEvery(100 * time.Millisecond).
 				ShouldNot(HaventFoundContainer())
+		})
+
+		It("silently handles API network list errors", func(ctx context.Context) {
+			ctrl := gomock.NewController(GinkgoT(),
+				gomock.WithOverridableExpectations())
+			sess := Successful(NewSession(ctx,
+				WithMockController(ctrl),
+				session.WithAutoCleaning("test=foobar")))
+			DeferCleanup(func(ctx context.Context) {
+				sess.Close(ctx)
+			})
+
+			rec := sess.Client().(*MockClient).EXPECT()
+			rec.NetworkList(gomock.Any(), gomock.Any()).
+				// why 2×? ...deferred cleanup
+				Times(2).
+				Return(nil, errors.New("error IJK305I")) // ...real programmers ;)
+			sess.AutoClean(ctx)
+		})
+
+		It("silently handles API network removal errors", func(ctx context.Context) {
+			ctrl := gomock.NewController(GinkgoT(),
+				gomock.WithOverridableExpectations())
+			sess := Successful(NewSession(ctx,
+				WithMockController(ctrl),
+				session.WithAutoCleaning("test=foobar")))
+			DeferCleanup(func(ctx context.Context) {
+				sess.Close(ctx)
+			})
+
+			rec := sess.Client().(*MockClient).EXPECT()
+			rec.NetworkList(gomock.Any(), gomock.Any()).
+				Times(2). // why 2×? ...deferred cleanup
+				Return([]types.NetworkResource{{ID: "42"}}, nil)
+			rec.NetworkRemove(gomock.Any(), gomock.Any()).
+				Times(2).
+				Return(errors.New("error IJK305I"))
+			sess.AutoClean(ctx)
 		})
 
 	})
