@@ -23,18 +23,27 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
-	"go.uber.org/mock/gomock"
-
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 	"github.com/thediveo/morbyd/run"
 	"github.com/thediveo/morbyd/safe"
 	"github.com/thediveo/morbyd/session"
 	"github.com/thediveo/morbyd/timestamper"
+	mock "go.uber.org/mock/gomock"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gleak"
 	. "github.com/thediveo/success"
 )
 
-var _ = Describe("sessions", func() {
+var _ = Describe("test sessions", func() {
+
+	BeforeEach(func() {
+		goodgos := Goroutines()
+		DeferCleanup(func() {
+			Eventually(Goroutines).Within(2 * time.Second).ProbeEvery(100 * time.Millisecond).
+				ShouldNot(HaveLeaked(goodgos))
+		})
+	})
 
 	It("reports an error when the client cannot be created", func(ctx context.Context) {
 		origdockerhost := os.Getenv(client.EnvOverrideHost)
@@ -54,7 +63,7 @@ var _ = Describe("sessions", func() {
 	When("auto-cleaning", func() {
 
 		It("skips auto-cleaning without a label set", Serial, func(ctx context.Context) {
-			ctrl := gomock.NewController(GinkgoT())
+			ctrl := mock.NewController(GinkgoT())
 			sess := Successful(NewSession(ctx,
 				WithMockController(ctrl)))
 			DeferCleanup(func(ctx context.Context) {
@@ -76,42 +85,40 @@ var _ = Describe("sessions", func() {
 				ShouldNot(HaventFoundContainer())
 		})
 
-		It("silently handles API network list errors", func(ctx context.Context) {
-			ctrl := gomock.NewController(GinkgoT(),
-				gomock.WithOverridableExpectations())
-			sess := Successful(NewSession(ctx,
-				WithMockController(ctrl),
-				session.WithAutoCleaning("test=foobar")))
-			DeferCleanup(func(ctx context.Context) {
-				sess.Close(ctx)
+		Context("handling Docker API errors", func() {
+
+			var rec *MockClientMockRecorder
+			var sess *Session
+
+			BeforeEach(func(ctx context.Context) {
+				ctrl := mock.NewController(GinkgoT(),
+					mock.WithOverridableExpectations())
+				sess = Successful(NewSession(ctx,
+					WithMockController(ctrl)))
+				DeferCleanup(func(ctx context.Context) {
+					sess.Close(ctx)
+				})
+				rec = sess.Client().(*MockClient).EXPECT()
 			})
 
-			rec := sess.Client().(*MockClient).EXPECT()
-			rec.NetworkList(gomock.Any(), gomock.Any()).
-				// why 2×? ...deferred cleanup
-				Times(2).
-				Return(nil, errors.New("error IJK305I")) // ...real programmers ;)
-			sess.AutoClean(ctx)
-		})
-
-		It("silently handles API network removal errors", func(ctx context.Context) {
-			ctrl := gomock.NewController(GinkgoT(),
-				gomock.WithOverridableExpectations())
-			sess := Successful(NewSession(ctx,
-				WithMockController(ctrl),
-				session.WithAutoCleaning("test=foobar")))
-			DeferCleanup(func(ctx context.Context) {
-				sess.Close(ctx)
+			It("silently handles API network list errors", func(ctx context.Context) {
+				rec.NetworkList(Any, Any).
+					Return(nil, errors.New("error IJK305I")) // ...real programmers ;)
+				sess.autoClean(ctx, "test.foo=bar")
 			})
 
-			rec := sess.Client().(*MockClient).EXPECT()
-			rec.NetworkList(gomock.Any(), gomock.Any()).
-				Times(2). // why 2×? ...deferred cleanup
-				Return([]types.NetworkResource{{ID: "42"}}, nil)
-			rec.NetworkRemove(gomock.Any(), gomock.Any()).
-				Times(2).
-				Return(errors.New("error IJK305I"))
-			sess.AutoClean(ctx)
+			It("silently handles API network removal errors", func(ctx context.Context) {
+				rec.NetworkList(Any, Any).
+					Return([]types.NetworkResource{
+						{ID: "42"},
+						{ID: "666"},
+					}, nil)
+				rec.NetworkRemove(Any, Any).
+					Times(2).
+					Return(errors.New("error IJK305I"))
+				sess.autoClean(ctx, "test.foo=bar")
+			})
+
 		})
 
 	})
@@ -120,7 +127,7 @@ var _ = Describe("sessions", func() {
 
 		var sess *Session
 
-		BeforeAll(func(ctx context.Context) {
+		BeforeEach(func(ctx context.Context) {
 			sess = Successful(NewSession(ctx,
 				session.WithAutoCleaning("test.morbyd=session")))
 			DeferCleanup(func(ctx context.Context) {

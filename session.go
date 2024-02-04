@@ -87,9 +87,11 @@ func (s *Session) AutoClean(ctx context.Context) {
 	if s.opts.AutoCleaningLabel == "" {
 		return
 	}
+	s.autoClean(ctx, s.opts.AutoCleaningLabel)
+}
 
+func (s *Session) autoClean(ctx context.Context, aclabel string) {
 	// Assemble a filter based on the auto-cleaning label.
-	aclabel := s.opts.AutoCleaningLabel
 	key, value, _ := strings.Cut(aclabel, "=")
 	if value == "" {
 		aclabel = key // just the key, no trailing "=" in case of a zero value.
@@ -122,10 +124,7 @@ func (s *Session) AutoClean(ctx context.Context) {
 		return
 	}
 	for _, net := range nets {
-		err := s.moby.NetworkRemove(ctx, net.ID)
-		if err != nil {
-			return
-		}
+		_ = s.moby.NetworkRemove(ctx, net.ID)
 	}
 }
 
