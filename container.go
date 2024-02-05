@@ -77,7 +77,19 @@ func (c *Container) IP(ctx context.Context) net.IP {
 		if err != nil {
 			continue
 		}
-		if details.Driver == "macvlan" {
+		switch details.Driver {
+		case "macvlan":
+			continue
+		case "host":
+			// Note that a container with "net:host" cannot be connected to any
+			// other network, so this is a sufficient response.
+			return net.ParseIP("127.0.0.1")
+		case "null": // a.k.a. "net:none"
+			// Note that a container with "net:none" (lo only) cannot be
+			// connected to any other network, so this is a sufficient response.
+			return nil
+		}
+		if netw.IPAddress == "" {
 			continue
 		}
 		return net.ParseIP(netw.IPAddress)
@@ -85,7 +97,13 @@ func (c *Container) IP(ctx context.Context) net.IP {
 	return nil
 }
 
-// PID of the initial container process, as seen by the host.
+// PID of the initial container process, as seen by the container engine. In
+// case the container is restarting, it waits for the next Doctor, erm,
+// container incarnation to come online.
+//
+// Note to Docker Desktop users: the PID is only valid in the context of the
+// Docker engine that in case of macOS runs in its own VM, and in case of WSL2
+// in its own PID namespace in the same HyperV Linux VM.
 func (c *Container) PID(ctx context.Context) (int, error) {
 	for {
 		inspRes, err := c.Session.moby.ContainerInspect(ctx, c.ID)
