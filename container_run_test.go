@@ -16,14 +16,19 @@ package morbyd
 
 import (
 	"context"
+	"errors"
 	"io"
 	"strings"
 	"time"
 
+	types "github.com/docker/docker/api/types"
+	container "github.com/docker/docker/api/types/container"
+	image "github.com/docker/docker/api/types/image"
 	"github.com/thediveo/morbyd/run"
 	"github.com/thediveo/morbyd/safe"
 	"github.com/thediveo/morbyd/session"
 	"github.com/thediveo/morbyd/timestamper"
+	mock "go.uber.org/mock/gomock"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -40,6 +45,86 @@ var _ = Describe("run container", Ordered, func() {
 		DeferCleanup(func(ctx context.Context) {
 			sess.Close(ctx)
 		})
+	})
+
+	When("failing", func() {
+
+		It("reports failing options", func(ctx context.Context) {
+			failopt := func(*run.Options) error { return errors.New("error IJK305I") }
+			Expect(sess.Run(ctx, "", failopt)).Error().To(HaveOccurred())
+		})
+
+		It("reports failing image checks", func(ctx context.Context) {
+			ctx, cancel := context.WithCancel(ctx)
+			cancel()
+			Expect(sess.Run(ctx, "busybox")).Error().To(MatchError(ContainSubstring("cannot run image")))
+		})
+
+		It("reports failing image pulls", func(ctx context.Context) {
+			ctrl := mock.NewController(GinkgoT())
+			sess := Successful(NewSession(ctx,
+				WithMockController(ctrl, "ImageList", "ImagePull")))
+			DeferCleanup(func(ctx context.Context) {
+				sess.Close(ctx)
+			})
+			rec := sess.Client().(*MockClient).EXPECT()
+
+			rec.ImageList(Any, Any).Return([]image.Summary{}, nil)
+			rec.ImagePull(Any, Any, Any).Return(nil, errors.New("error IJK305I"))
+
+			Expect(sess.Run(ctx, "busybox")).Error().To(MatchError(ContainSubstring("cannot pull image")))
+		})
+
+		It("reports creation failure", func(ctx context.Context) {
+			ctrl := mock.NewController(GinkgoT())
+			sess := Successful(NewSession(ctx,
+				WithMockController(ctrl, "ContainerCreate")))
+			DeferCleanup(func(ctx context.Context) {
+				sess.Close(ctx)
+			})
+			rec := sess.Client().(*MockClient).EXPECT()
+
+			rec.ContainerCreate(Any, Any, Any, Any, Any, Any).Return(container.CreateResponse{}, errors.New("error IJK305I"))
+
+			Expect(sess.Run(ctx, "busybox")).Error().To(MatchError(ContainSubstring("cannot create container")))
+		})
+
+		It("reports attachment failure and cleans up", func(ctx context.Context) {
+			const canaryName = "morbyd-canary-container"
+
+			ctrl := mock.NewController(GinkgoT())
+			sess := Successful(NewSession(ctx,
+				session.WithAutoCleaning("test.morbyd=container-run"),
+				WithMockController(ctrl, "ContainerAttach")))
+			DeferCleanup(func(ctx context.Context) {
+				sess.Close(ctx)
+			})
+			rec := sess.Client().(*MockClient).EXPECT()
+
+			rec.ContainerAttach(Any, Any, Any).Return(types.HijackedResponse{}, errors.New("error IJK305I"))
+
+			Expect(sess.Run(ctx, "busybox", run.WithName(canaryName))).Error().To(MatchError(ContainSubstring("cannot attach to container")))
+			Expect(sess.Container(ctx, canaryName)).Error().To(HaveOccurred())
+		})
+
+		It("reports start failure and cleans up", func(ctx context.Context) {
+			const canaryName = "morbyd-canary-container"
+
+			ctrl := mock.NewController(GinkgoT())
+			sess := Successful(NewSession(ctx,
+				session.WithAutoCleaning("test.morbyd=container-run"),
+				WithMockController(ctrl, "ContainerStart")))
+			DeferCleanup(func(ctx context.Context) {
+				sess.Close(ctx)
+			})
+			rec := sess.Client().(*MockClient).EXPECT()
+
+			rec.ContainerStart(Any, Any, Any).Return(errors.New("error IJK305I"))
+
+			Expect(sess.Run(ctx, "busybox", run.WithName(canaryName))).Error().To(MatchError(ContainSubstring("cannot start container")))
+			Expect(sess.Container(ctx, canaryName)).Error().To(HaveOccurred())
+		})
+
 	})
 
 	It("runs a container and captures its stdout and stderr", func(ctx context.Context) {
