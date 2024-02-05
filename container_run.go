@@ -149,7 +149,7 @@ func (s *Session) Run(ctx context.Context, imageref string, opts ...run.Opt) (cn
 	}
 	details, err := s.moby.ContainerInspect(ctx, cntrID)
 	if err != nil {
-		return nil, err // removes new container
+		return nil, fmt.Errorf("cannot inspect newly started container, reason: %w", err)
 	}
 	cntr = &Container{
 		Name:    details.Name[1:],

@@ -125,6 +125,23 @@ var _ = Describe("run container", Ordered, func() {
 			Expect(sess.Container(ctx, canaryName)).Error().To(HaveOccurred())
 		})
 
+		It("reports update failure after start, and cleans up", func(ctx context.Context) {
+			const canaryName = "morbyd-canary-container"
+
+			ctrl := mock.NewController(GinkgoT())
+			sess := Successful(NewSession(ctx,
+				session.WithAutoCleaning("test.morbyd=container-run"),
+				WithMockController(ctrl, "ContainerInspect")))
+			DeferCleanup(func(ctx context.Context) {
+				sess.Close(ctx)
+			})
+			rec := sess.Client().(*MockClient).EXPECT()
+
+			rec.ContainerInspect(Any, Any).Return(types.ContainerJSON{}, errors.New("error IJK305I"))
+
+			Expect(sess.Run(ctx, "busybox", run.WithName(canaryName))).Error().To(MatchError(ContainSubstring("cannot inspect newly started container")))
+		})
+
 	})
 
 	It("runs a container and captures its stdout and stderr", func(ctx context.Context) {
