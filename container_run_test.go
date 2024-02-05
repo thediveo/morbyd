@@ -144,7 +144,7 @@ var _ = Describe("run container", Ordered, func() {
 
 	})
 
-	It("runs a container and captures its stdout and stderr", func(ctx context.Context) {
+	It("runs a container and captures its stdout and stderr separately", func(ctx context.Context) {
 		msg := "D'OH!"
 		errmsg := "D'OOOOHOOO!!"
 
@@ -167,17 +167,13 @@ var _ = Describe("run container", Ordered, func() {
 					"while true; do sleep 1s; done"),
 			run.WithAutoRemove(),
 			run.WithInput(input),
-			// Using a timeline io.Writer helps with diagnosing potential test
+			// Using a timestamper io.Writer helps with diagnosing potential test
 			// issues, as we can relate the container's output to the test steps
 			// as when these are happening.
 			run.WithDemuxedOutput(io.MultiWriter(timestamper.New(GinkgoWriter), &buff),
 				io.MultiWriter(timestamper.New(GinkgoWriter), &errbuf)),
 		))
 		Expect(cntr).NotTo(BeNil())
-		defer func() {
-			By("killing the container just to be sure (really, you cannot trust them otherwise)")
-			cntr.Kill(ctx)
-		}()
 
 		By("retrieving the container's PID")
 		Expect(cntr.PID(ctx)).NotTo(BeZero())
@@ -187,6 +183,50 @@ var _ = Describe("run container", Ordered, func() {
 		Eventually(buff.String).Within(2 * time.Second).ProbeEvery(100 * time.Second).
 			Should(Equal(">>" + msg + "<<\n"))
 		Eventually(errbuf.String).Should(Equal(errmsg + "\n"))
+
+		By("stopping the container")
+		cntr.Stop(ctx)
+	})
+
+	It("runs a container and captures its combined TTY output", func(ctx context.Context) {
+		msg := "D'OH!"
+		errmsg := "D'OOOOHOOO!!"
+
+		By("running a test container")
+		var buff safe.Buffer
+
+		// Providing an already primed input stream to the container results in
+		// the script happily slurping in this data as soon as the container has
+		// started. In turn, the script would already be finished and the
+		// container already wound done by the time we want to inspect it for
+		// its PID, causing spurious test failures. We thus send the script in
+		// idle sleep that it'll be leaving only upon SIGTERM, where we control
+		// when we send this SIGTERM.
+		input := strings.NewReader(msg + "\n")
+		cntr := Successful(sess.Run(ctx, "busybox",
+			run.WithCommand("/bin/sh", "-c",
+				"trap \"exit\" SIGTERM; "+
+					"IFS= read -r -s msg; echo \">>$msg<<\"; echo \""+errmsg+"\" 1>&2; "+
+					"while true; do sleep 1s; done"),
+			run.WithAutoRemove(),
+			run.WithInput(input),
+			// Using a timestamper io.Writer helps with diagnosing potential test
+			// issues, as we can relate the container's output to the test steps
+			// as when these are happening.
+			run.WithTTY(),
+			run.WithCombinedOutput(io.MultiWriter(timestamper.New(GinkgoWriter), &buff)),
+		))
+		Expect(cntr).NotTo(BeNil())
+
+		By("retrieving the container's PID")
+		Expect(cntr.PID(ctx)).NotTo(BeZero())
+
+		By("talking to the container and receiving its answer")
+		// Expect the correct, demux'ed output on stdout and stderr.
+		Eventually(buff.String).Within(2 * time.Second).ProbeEvery(100 * time.Second).
+			Should(Equal(msg + "\r\n" +
+				">>" + msg + "<<\r\n" +
+				errmsg + "\r\n"))
 
 		By("stopping the container")
 		cntr.Stop(ctx)

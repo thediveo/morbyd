@@ -85,9 +85,6 @@ var _ = Describe("getting container IPs", Ordered, func() {
 		rec.NetworkInspect(Any, mock.Eq("mac-wie-lahm"), Any).Return(types.NetworkResource{
 			Driver: "macvlan",
 		}, nil)
-		rec.NetworkInspect(Any, mock.Eq("bridge-over-troubled-data"), Any).Return(types.NetworkResource{
-			Driver: "bridge",
-		}, nil)
 
 		cntr := &Container{
 			Session: sess,
@@ -98,15 +95,11 @@ var _ = Describe("getting container IPs", Ordered, func() {
 							NetworkID: "mac-wie-lahm",
 							IPAddress: "1.0.1.1",
 						},
-						"bridge-over-troubled-data": {
-							NetworkID: "bridge-over-troubled-data",
-							IPAddress: "1.0.2.1",
-						},
 					},
 				},
 			},
 		}
-		Expect(cntr.IP(ctx)).To(Equal(net.ParseIP("1.0.2.1")))
+		Expect(cntr.IP(ctx)).To(BeNil())
 	})
 
 	It("returns a nil IP in case of API errors", func(ctx context.Context) {

@@ -149,7 +149,8 @@ func (c *Container) Wait(ctx context.Context) error {
 	waitch, errch := c.Session.moby.ContainerWait(ctx, c.ID, container.WaitConditionNotRunning)
 	select {
 	case err := <-errch:
-		return err
+		return fmt.Errorf("waiting for container %q/%s to finish failed, reason: %w",
+			c.Name, c.AbbreviatedID(), err)
 	case <-waitch:
 		return nil
 	}

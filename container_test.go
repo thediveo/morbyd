@@ -22,6 +22,7 @@ import (
 	"time"
 
 	types "github.com/docker/docker/api/types"
+	container "github.com/docker/docker/api/types/container"
 	"github.com/thediveo/morbyd/run"
 	"github.com/thediveo/morbyd/safe"
 	"github.com/thediveo/morbyd/session"
@@ -114,4 +115,25 @@ var _ = Describe("containers", Ordered, func() {
 		Expect(cntr.Refresh(ctx)).Error().To(MatchError(ContainSubstring("cannot refresh details of container")))
 	})
 
+	It("returns an error when waiting fails", func(ctx context.Context) {
+		ctrl := mock.NewController(GinkgoT())
+		sess := Successful(NewSession(ctx,
+			WithMockController(ctrl, "ContainerWait")))
+		DeferCleanup(func(ctx context.Context) {
+			sess.Close(ctx)
+		})
+		rec := sess.Client().(*MockClient).EXPECT()
+
+		errch := make(chan error, 1)
+		rec.ContainerWait(Any, Any, Any).Return(make(chan container.WaitResponse), errch)
+
+		errch <- errors.New("error IJK305I")
+		cntr := &Container{
+			Session: sess,
+			Name:    "foobar",
+			ID:      "deadbeefc0011dea",
+		}
+		Expect(cntr.Wait(ctx)).Error().To(MatchError(ContainSubstring("waiting for container")))
+
+	})
 })

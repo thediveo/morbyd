@@ -62,6 +62,10 @@ type Options struct {
 // WithCombinedOutput sends the container's stdout and stderr to the specified
 // io.Writer. This also automatically attaches the container's stdout and stderr
 // after the container has been created.
+//
+// Please note that you should WithCombinedOutput when using [WithTTYP],as
+// Docker then combines the container's stdout and stderr into a single output
+// stream.
 func WithCombinedOutput(w io.Writer) Opt {
 	return func(o *Options) error {
 		o.Out = w
