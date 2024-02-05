@@ -60,7 +60,10 @@ func (c *Container) Exec(ctx context.Context, cmd exec.Cmd, opts ...exec.Opt) (e
 		},
 	}
 	for _, opt := range opts {
-		opt(&exopts)
+		if err := opt(&exopts); err != nil {
+			return nil, fmt.Errorf("cannot execute command in container %q/%s, reason: %w",
+				c.Name, c.AbbreviatedID(), err)
+		}
 	}
 
 	if exopts.Out == nil {

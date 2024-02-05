@@ -45,7 +45,7 @@ var _ = Describe("image presence", Ordered, func() {
 		Expect(sess.HasImage(ctx, imgref)).To(BeFalse())
 
 		Expect(sess.Client().ImagePull(ctx, imgreflatest, types.ImagePullOptions{})).Error().NotTo(HaveOccurred())
-		Expect(sess.Client().ImageTag(ctx, imgreflatest, imgref))
+		Expect(sess.Client().ImageTag(ctx, imgreflatest, imgref)).Error().NotTo(HaveOccurred())
 		DeferCleanup(func(ctx context.Context) {
 			Expect(sess.Client().ImageRemove(ctx, imgref, types.ImageRemoveOptions{})).Error().NotTo(HaveOccurred())
 		})

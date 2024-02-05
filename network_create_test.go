@@ -32,22 +32,24 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gleak"
 	. "github.com/thediveo/success"
 )
 
-var _ = Describe("create custom networks", Ordered, func() {
+var _ = Describe("creating custom networks", Ordered, func() {
 
-	var sess *Session
+	BeforeEach(func() {
+		goodgos := Goroutines()
+		Eventually(Goroutines).Within(2 * time.Second).ProbeEvery(100 * time.Second).
+			ShouldNot(HaveLeaked(goodgos))
+	})
 
-	BeforeAll(func(ctx context.Context) {
-		sess = Successful(NewSession(ctx,
+	It("rejects invalid options", func(ctx context.Context) {
+		sess := Successful(NewSession(ctx,
 			session.WithAutoCleaning("test.morbyd=")))
 		DeferCleanup(func(ctx context.Context) {
 			sess.Close(ctx)
 		})
-	})
-
-	It("rejects invalid options", func(ctx context.Context) {
 		Expect(sess.CreateNetwork(ctx, "foobar",
 			net.WithLabel(""))).Error().To(HaveOccurred())
 	})
@@ -55,6 +57,11 @@ var _ = Describe("create custom networks", Ordered, func() {
 	It("creates a custom bridge network", func(ctx context.Context) {
 		const name = "morbyd-custom-bridge-network"
 
+		sess := Successful(NewSession(ctx,
+			session.WithAutoCleaning("test.morbyd=")))
+		DeferCleanup(func(ctx context.Context) {
+			sess.Close(ctx)
+		})
 		nw := Successful(sess.CreateNetwork(ctx, name,
 			net.WithInternal(),
 			bridge.WithBridgeName("brrr"),
