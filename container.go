@@ -138,10 +138,9 @@ func (c *Container) Stop(ctx context.Context) {
 }
 
 // Wait for the container to finish, that is, become “not-running” in Docker API
-// parlance.
+// parlance. See also: [Docker's Client.ContainerWait].
 //
-// [Docker Client.ContainerWait]:
-// https://pkg.go.dev/github.com/docker/docker/client#Client.ContainerWait
+// [Docker's Client.ContainerWait]: https://pkg.go.dev/github.com/docker/docker/client#Client.ContainerWait
 func (c *Container) Wait(ctx context.Context) error {
 	// Nota bene: errch is buffered with size 1. The wait result channel is
 	// unbuffered though. ContainerWait EITHER sends an error OR on a result,
