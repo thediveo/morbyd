@@ -61,9 +61,11 @@ func (c *Container) Refresh(ctx context.Context) error {
 // return nil. IP ignores addresses on a MACVLAN network, as IP addresses on a
 // MACVLAN network cannot reached from the host.
 //
-// Please note that this IP address is usable without the need to (publicly)
+// NOTE: the container's IP address is usable without the need to (publicly)
 // expose container ports on the host – which often is less than desirable in
-// tests.
+// tests. However, with Docker Desktop the container IPs aren't directly
+// reachable anymore as on plain Docker hosts, so in these cases you'll need to
+// expose a container's exposable ports on (preferably) loopback.
 func (c *Container) IP(ctx context.Context) net.IP {
 	// The container's own list of networks it is attached to unfortunately
 	// doesn't tell us what the driver is. However, we need to know in order to
@@ -112,7 +114,7 @@ func (c *Container) PID(ctx context.Context) (int, error) {
 }
 
 // Stop the container by sending it a termination signal. Default is SIGTERM,
-// unless changed using [rc.WithStopSignal].
+// unless changed using [run.WithStopSignal].
 func (c *Container) Stop(ctx context.Context) {
 	_ = c.Session.moby.ContainerStop(ctx, c.ID, container.StopOptions{})
 }

@@ -22,3 +22,6 @@ test: ## run unit tests
 
 vuln: ## run go vulnerabilities check
 	@scripts/vuln.sh
+
+gen: ## (re)generate mock
+	@scripts/gogen.sh

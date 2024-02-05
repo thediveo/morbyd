@@ -85,40 +85,41 @@ var _ = Describe("test sessions", func() {
 				ShouldNot(HaventFoundContainer())
 		})
 
-		Context("handling Docker API errors", func() {
-
-			var rec *MockClientMockRecorder
-			var sess *Session
-
-			BeforeEach(func(ctx context.Context) {
-				ctrl := mock.NewController(GinkgoT(),
-					mock.WithOverridableExpectations())
-				sess = Successful(NewSession(ctx,
-					WithMockController(ctrl)))
-				DeferCleanup(func(ctx context.Context) {
-					sess.Close(ctx)
-				})
-				rec = sess.Client().(*MockClient).EXPECT()
+		It("silently handles API network list errors", func(ctx context.Context) {
+			ctrl := mock.NewController(GinkgoT())
+			sess := Successful(NewSession(ctx,
+				WithMockController(ctrl, "NetworkList")))
+			DeferCleanup(func(ctx context.Context) {
+				sess.Close(ctx)
 			})
+			rec := sess.Client().(*MockClient).EXPECT()
 
-			It("silently handles API network list errors", func(ctx context.Context) {
-				rec.NetworkList(Any, Any).
-					Return(nil, errors.New("error IJK305I")) // ...real programmers ;)
-				sess.autoClean(ctx, "test.foo=bar")
+			rec.NetworkList(Any, Any).
+				Return(nil, errors.New("error IJK305I")) // ...real programmers ;)
+			sess.autoClean(ctx, "test.foo=bar")
+		})
+
+		It("silently handles API network removal errors", func(ctx context.Context) {
+			ctrl := mock.NewController(GinkgoT())
+			sess := Successful(NewSession(ctx,
+				WithMockController(ctrl, "NetworkList", "NetworkRemove")))
+			DeferCleanup(func(ctx context.Context) {
+				sess.Close(ctx)
 			})
+			rec := sess.Client().(*MockClient).EXPECT()
 
-			It("silently handles API network removal errors", func(ctx context.Context) {
-				rec.NetworkList(Any, Any).
-					Return([]types.NetworkResource{
-						{ID: "42"},
-						{ID: "666"},
-					}, nil)
-				rec.NetworkRemove(Any, Any).
-					Times(2).
-					Return(errors.New("error IJK305I"))
-				sess.autoClean(ctx, "test.foo=bar")
-			})
-
+			rec.NetworkList(Any, Any).
+				Return([]types.NetworkResource{
+					{ID: "42"},
+					{ID: "666"},
+				}, nil)
+			rec.NetworkRemove(Any, mock.Eq("42")).
+				Times(1).
+				Return(nil)
+			rec.NetworkRemove(Any, mock.Eq("666")).
+				Times(1).
+				Return(errors.New("error IJK305I"))
+			sess.autoClean(ctx, "test.foo=bar")
 		})
 
 	})
@@ -177,6 +178,22 @@ var _ = Describe("test sessions", func() {
 
 		})
 
+	})
+
+	It("detects Docker Desktop platform", func(ctx context.Context) {
+		ctrl := mock.NewController(GinkgoT())
+		sess := Successful(NewSession(ctx,
+			WithMockController(ctrl, "ServerVersion")))
+		DeferCleanup(func(ctx context.Context) {
+			sess.Close(ctx)
+		})
+		rec := sess.Client().(*MockClient).EXPECT()
+
+		rec.ServerVersion(Any).Return(types.Version{
+			Platform: struct{ Name string }{"foobar Desktop"},
+		}, nil)
+
+		Expect(sess.IsDockerDesktop(ctx)).To(BeTrue())
 	})
 
 })

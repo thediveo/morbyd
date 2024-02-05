@@ -61,4 +61,6 @@ type Client interface {
 	NetworkInspect(ctx context.Context, networkID string, options types.NetworkInspectOptions) (types.NetworkResource, error)
 	NetworkList(ctx context.Context, options types.NetworkListOptions) ([]types.NetworkResource, error)
 	NetworkRemove(ctx context.Context, networkID string) error
+
+	ServerVersion(ctx context.Context) (types.Version, error)
 }

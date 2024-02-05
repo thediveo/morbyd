@@ -164,3 +164,15 @@ func (s *Session) Network(ctx context.Context, nameID string) (*Network, error) 
 	}
 	return netw, nil
 }
+
+// IsDockerDesktop returns true if the Docker engine is the Docker Desktop
+// engine, as opposed to a “plain” Docker engine. This differentiation is
+// important in some situation, as containers managed by Docker Desktop cannot
+// be directly reached from the host, but always require ports to be published.
+func (s *Session) IsDockerDesktop(ctx context.Context) bool {
+	info, err := s.moby.ServerVersion(ctx)
+	if err != nil {
+		return false
+	}
+	return strings.Contains(info.Platform.Name, "Desktop")
+}

@@ -16,18 +16,21 @@ package morbyd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"math/rand"
 	"net/http"
 	"time"
 
+	types "github.com/docker/docker/api/types"
 	"github.com/thediveo/morbyd/ipam"
 	"github.com/thediveo/morbyd/net"
 	"github.com/thediveo/morbyd/run"
 	"github.com/thediveo/morbyd/safe"
 	"github.com/thediveo/morbyd/session"
 	"github.com/thediveo/morbyd/timestamper"
+	mock "go.uber.org/mock/gomock"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -61,7 +64,11 @@ var _ = Describe("containers", Ordered, func() {
 			Expect(cntr.IP(ctx)).To(BeNil())
 		})
 
-		It("returns an IP and we can talk to it", func(ctx context.Context) {
+		It("returns a container's IP and we can talk to it", func(ctx context.Context) {
+			if sess.IsDockerDesktop(ctx) {
+				Skip("not on Docker Desktop")
+			}
+
 			const testnetname = "morbyd-bridge"
 			netw := Successful(sess.CreateNetwork(ctx, testnetname))
 			cntr := Successful(sess.Run(ctx, "busybox",
@@ -70,11 +77,17 @@ var _ = Describe("containers", Ordered, func() {
 						"httpd -v -f -h /www"),
 				run.WithCombinedOutput(timestamper.New(GinkgoWriter)),
 				run.WithNetwork(netw.ID)))
+
+			By("waiting for container initial process to have started")
+			Expect(cntr.PID(ctx)).Error().NotTo(HaveOccurred())
+
+			By("doing an HTTP exchange with the container")
 			ip := cntr.IP(ctx)
 			Expect(ip).NotTo(BeNil())
 			get := Successful(http.NewRequestWithContext(ctx,
 				http.MethodGet, fmt.Sprintf("http://%s/", ip), nil))
-			resp := Successful(http.DefaultClient.Do(get))
+			clnt := &http.Client{Timeout: 5 * time.Second}
+			resp := Successful(clnt.Do(get))
 			defer resp.Body.Close()
 			body := Successful(io.ReadAll(resp.Body))
 			Expect(string(body)).To(Equal("Hellorld!\n"))
@@ -134,6 +147,120 @@ var _ = Describe("containers", Ordered, func() {
 
 		c = &Container{ID: string(id)}
 		Expect(c.AbbreviatedID()).To(Equal(string(id)[:AbbreviatedIDLength]))
+	})
+
+	It("returns an error when container refresh fails", func(ctx context.Context) {
+		ctrl := mock.NewController(GinkgoT())
+		sess := Successful(NewSession(ctx,
+			WithMockController(ctrl, "ContainerInspect")))
+		DeferCleanup(func(ctx context.Context) {
+			sess.Close(ctx)
+		})
+		rec := sess.Client().(*MockClient).EXPECT()
+
+		rec.ContainerInspect(Any, Any).Return(types.ContainerJSON{}, errors.New("error IJK305I"))
+
+		cntr := &Container{Session: sess, ID: "bad1dea"}
+		Expect(cntr.Refresh(ctx)).Error().To(MatchError(ContainSubstring("cannot refresh details of container")))
+	})
+
+	When("getting a container's PID", func() {
+
+		It("retries until PID becomes available", func(ctx context.Context) {
+			ctrl := mock.NewController(GinkgoT())
+			sess := Successful(NewSession(ctx,
+				WithMockController(ctrl, "ContainerInspect")))
+			DeferCleanup(func(ctx context.Context) {
+				sess.Close(ctx)
+			})
+			rec := sess.Client().(*MockClient).EXPECT()
+
+			rec.ContainerInspect(Any, Any).Return(types.ContainerJSON{
+				ContainerJSONBase: &types.ContainerJSONBase{},
+			}, nil)
+			rec.ContainerInspect(Any, Any).Return(types.ContainerJSON{
+				ContainerJSONBase: &types.ContainerJSONBase{
+					State: &types.ContainerState{
+						Pid: 42,
+					},
+				},
+			}, nil)
+
+			cntr := &Container{Session: sess, ID: "bad1dea"}
+			Expect(cntr.PID(ctx)).To(Equal(42))
+		})
+
+		It("waits for a restart", func(ctx context.Context) {
+			ctrl := mock.NewController(GinkgoT())
+			sess := Successful(NewSession(ctx,
+				WithMockController(ctrl, "ContainerInspect")))
+			DeferCleanup(func(ctx context.Context) {
+				sess.Close(ctx)
+			})
+			rec := sess.Client().(*MockClient).EXPECT()
+
+			rec.ContainerInspect(Any, Any).Return(types.ContainerJSON{
+				ContainerJSONBase: &types.ContainerJSONBase{
+					State: &types.ContainerState{
+						Dead:       true,
+						Restarting: true,
+					},
+				},
+			}, nil)
+			rec.ContainerInspect(Any, Any).Return(types.ContainerJSON{
+				ContainerJSONBase: &types.ContainerJSONBase{
+					State: &types.ContainerState{
+						Pid: 42,
+					},
+				},
+			}, nil)
+
+			cntr := &Container{Session: sess, ID: "bad1dea"}
+			Expect(cntr.PID(ctx)).To(Equal(42))
+		})
+
+		It("gives up when there's no chance", func(ctx context.Context) {
+			ctrl := mock.NewController(GinkgoT())
+			sess := Successful(NewSession(ctx,
+				WithMockController(ctrl, "ContainerInspect")))
+			DeferCleanup(func(ctx context.Context) {
+				sess.Close(ctx)
+			})
+			rec := sess.Client().(*MockClient).EXPECT()
+
+			rec.ContainerInspect(Any, Any).Return(types.ContainerJSON{
+				ContainerJSONBase: &types.ContainerJSONBase{},
+			}, nil)
+			rec.ContainerInspect(Any, Any).Return(types.ContainerJSON{
+				ContainerJSONBase: &types.ContainerJSONBase{
+					State: &types.ContainerState{
+						OOMKilled: true,
+					},
+				},
+			}, nil)
+
+			cntr := &Container{Session: sess, ID: "bad1dea"}
+			Expect(cntr.PID(ctx)).Error().To(HaveOccurred())
+		})
+
+		When("handling API errors", func() {
+
+			It("reports an error when container cannot be inspected", func(ctx context.Context) {
+				ctrl := mock.NewController(GinkgoT())
+				sess := Successful(NewSession(ctx,
+					WithMockController(ctrl, "ContainerInspect")))
+				DeferCleanup(func(ctx context.Context) {
+					sess.Close(ctx)
+				})
+				rec := sess.Client().(*MockClient).EXPECT()
+
+				rec.ContainerInspect(Any, Any).Return(types.ContainerJSON{}, errors.New("error IJK305I"))
+
+				cntr := &Container{Session: sess, ID: "bad1dea"}
+				Expect(cntr.PID(ctx)).Error().To(HaveOccurred())
+			})
+
+		})
 	})
 
 })
