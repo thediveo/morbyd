@@ -50,8 +50,9 @@ elements, such as names, labels, and options.
     unit test context creation.
 
   - extensive unit tests with large coverage. We even mock the Docker client in
-    order to cover the "unhappy paths", also known as "error handling". _Those_
-    paths most TDD apostles forget to preach about for _some_ reason.
+    order to cover the "unhappy paths", also known as "error handling". In
+    addition, we run go routine leak checks, courtesy of [Gomega
+    `gleak`](https://onsi.github.io/gomega/#codegleakcode-finding-leaked-goroutines).
 
 ## Trivia
 
