@@ -17,16 +17,24 @@ package morbyd
 import (
 	"context"
 	"errors"
+	"time"
 
-	types "github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types"
 	mock "go.uber.org/mock/gomock"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gleak"
 	. "github.com/thediveo/success"
 )
 
 var _ = Describe("getting container PIDs", Ordered, func() {
+
+	BeforeEach(func() {
+		goodgos := Goroutines()
+		Eventually(Goroutines).Within(2 * time.Second).ProbeEvery(100 * time.Second).
+			ShouldNot(HaveLeaked(goodgos))
+	})
 
 	It("retries until PID becomes available", func(ctx context.Context) {
 		ctrl := mock.NewController(GinkgoT())

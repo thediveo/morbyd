@@ -54,6 +54,14 @@ var _ = Describe("execute command inside container", Ordered, func() {
 			})
 		})
 
+		It("rejects failing options", func(ctx context.Context) {
+			failopt := func(*exec.Options) error {
+				return errors.New("error IJK305I")
+			}
+			cntr := &Container{}
+			Expect(cntr.Exec(ctx, exec.Command(""), failopt)).Error().To(HaveOccurred())
+		})
+
 		It("executes a command and waits for it to terminate", SpecTimeout(30*time.Second), func(ctx context.Context) {
 			By("spinning up a test container")
 			cntr := Successful(sess.Run(ctx, "busybox",

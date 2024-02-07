@@ -19,7 +19,7 @@ import (
 	"errors"
 	"time"
 
-	image "github.com/docker/docker/api/types/image"
+	types "github.com/docker/docker/api/types"
 	mock "go.uber.org/mock/gomock"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -28,46 +28,52 @@ import (
 	. "github.com/thediveo/success"
 )
 
-var _ = Describe("image presence", Ordered, func() {
+var _ = Describe("PIDs of commands executing inside containers", Ordered, func() {
 
-	BeforeEach(func(ctx context.Context) {
+	BeforeEach(func() {
 		goodgos := Goroutines()
-		DeferCleanup(func() {
-			Eventually(Goroutines).Within(2 * time.Second).ProbeEvery(250 * time.Millisecond).
-				ShouldNot(HaveLeaked(goodgos))
-		})
+		Eventually(Goroutines).Within(2 * time.Second).ProbeEvery(100 * time.Second).
+			ShouldNot(HaveLeaked(goodgos))
 	})
 
-	It("reports whether an image is locally available", func(ctx context.Context) {
-		const imgref = "busybox:latestandgreatest"
-
+	It("reports when the introspection fails", func(ctx context.Context) {
 		ctrl := mock.NewController(GinkgoT())
 		sess := Successful(NewSession(ctx,
-			WithMockController(ctrl, "ImageList")))
+			WithMockController(ctrl, "ContainerExecInspect")))
 		DeferCleanup(func(ctx context.Context) {
 			sess.Close(ctx)
 		})
 		rec := sess.Client().(*MockClient).EXPECT()
-		rec.ImageList(Any, Any).Return([]image.Summary{}, nil)
-		rec.ImageList(Any, Any).Return([]image.Summary{
-			{ /*doesn't matter what, just needs to exist*/ },
-		}, nil)
 
-		Expect(sess.HasImage(ctx, imgref)).To(BeFalse())
-		Expect(sess.HasImage(ctx, imgref)).To(BeTrue())
+		rec.ContainerExecInspect(Any, Any).Return(types.ContainerExecInspect{}, errors.New("error IJK305I"))
+
+		ex := &ExecSession{
+			Container: &Container{
+				Session: sess,
+			},
+		}
+		Expect(ex.PID(ctx)).Error().To(HaveOccurred())
 	})
 
-	It("reports image listing errors", func(ctx context.Context) {
+	It("aborts its nap", func(ctx context.Context) {
 		ctrl := mock.NewController(GinkgoT())
 		sess := Successful(NewSession(ctx,
-			WithMockController(ctrl, "ImageList")))
+			WithMockController(ctrl, "ContainerExecInspect")))
 		DeferCleanup(func(ctx context.Context) {
 			sess.Close(ctx)
 		})
 		rec := sess.Client().(*MockClient).EXPECT()
-		rec.ImageList(Any, Any).Return(nil, errors.New("error IJK305I"))
 
-		Expect(sess.HasImage(ctx, "busybox:absolutelygreatest")).Error().To(HaveOccurred())
+		rec.ContainerExecInspect(Any, Any).Return(types.ContainerExecInspect{}, nil)
+
+		ex := &ExecSession{
+			Container: &Container{
+				Session: sess,
+			},
+		}
+		ctx, cancel := context.WithCancel(ctx)
+		cancel()
+		Expect(ex.PID(ctx)).Error().To(HaveOccurred())
 	})
 
 })

@@ -94,7 +94,7 @@ func (s *Session) BuildImage(ctx context.Context, buildctxpath string, opts ...b
 			if err := json.Unmarshal(*auxmsg.Aux, &aux); err != nil || aux.ID == "" {
 				return
 			}
-			// Pick up the image ID when it floats by.
+			// Pick up the image ID when it floats by ... and is non-zero.
 			id = aux.ID
 		})
 	return id, err

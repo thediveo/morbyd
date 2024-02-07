@@ -18,11 +18,13 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"strings"
 	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/thediveo/morbyd/build"
 	"github.com/thediveo/morbyd/session"
+	mock "go.uber.org/mock/gomock"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -148,6 +150,25 @@ var _ = Describe("build image", Ordered, func() {
 			Expect(id).To(BeEmpty())
 		})
 
+	})
+
+	It("skips invalid aux messages", func(ctx context.Context) {
+		ctrl := mock.NewController(GinkgoT())
+		sess := Successful(NewSession(ctx,
+			WithMockController(ctrl, "ImageBuild")))
+		DeferCleanup(func(ctx context.Context) {
+			sess.Close(ctx)
+		})
+		rec := sess.Client().(*MockClient).EXPECT()
+
+		rc := io.NopCloser(strings.NewReader(`
+{"aux":{"ID":"foobar"}}
+{"aux":{"ID":""}}
+{"aux":{"ID":42}}
+`))
+		rec.ImageBuild(Any, Any, Any).Return(types.ImageBuildResponse{Body: rc}, nil)
+
+		Expect(sess.BuildImage(ctx, "./_test/dockerignore")).To(Equal("foobar"))
 	})
 
 })
