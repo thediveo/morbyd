@@ -5,8 +5,9 @@
 [![PkgGoDev](https://img.shields.io/badge/-reference-blue?logo=go&logoColor=white&labelColor=505050)](https://pkg.go.dev/github.com/thediveo/morbyd)
 [![License](https://img.shields.io/github/license/thediveo/morbyd)](https://img.shields.io/github/license/thediveo/morbyd)
 ![build and test](https://github.com/thediveo/morbyd/workflows/build%20and%20test/badge.svg?branch=master)
-![Coverage](https://img.shields.io/badge/Coverage-95.0%25-brightgreen)
+![goroutines](https://img.shields.io/badge/go%20routines-not%20leaking-success)
 [![Go Report Card](https://goreportcard.com/badge/github.com/thediveo/morbyd)](https://goreportcard.com/report/github.com/thediveo/morbyd)
+![Coverage](https://img.shields.io/badge/Coverage-99.6%25-brightgreen)
 
 `morbyd` is a thin layer on top of the standard Docker Go client to easily build
 and run throw-away test Docker images and containers. And to run commands inside
@@ -49,7 +50,10 @@ elements, such as names, labels, and options.
     [Ginkgo](https://pkg.go.dev/github.com/onsi/ginkgo)) that support automatic
     unit test context creation.
 
-  - extensive unit tests with large coverage.
+  - extensive unit tests with large coverage. We even mock the Docker client in
+    order to cover the "unhappy paths", also known as "error handling". In
+    addition, we run go routine leak checks, courtesy of [Gomega
+    `gleak`](https://onsi.github.io/gomega/#codegleakcode-finding-leaked-goroutines).
 
 ## Trivia
 

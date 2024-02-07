@@ -39,10 +39,8 @@ var _ = Describe("ipam driver and pool options", func() {
 				WithAuxAddress("bar", "0.0.1.3")),
 			WithPool("0.0.2.0/24"),
 			WithOption("fool=barz"),
-			WithOption("blabla"),
-			WithOption("="),
 		} {
-			opt(&ipamos)
+			Expect(opt(&ipamos)).To(Succeed())
 		}
 		Expect(ipamos.Driver).To(Equal("foobar"))
 		Expect(ipamos.Config).To(ConsistOf(
@@ -61,6 +59,9 @@ var _ = Describe("ipam driver and pool options", func() {
 		))
 		Expect(ipamos.Options).To(HaveLen(1))
 		Expect(ipamos.Options).To(HaveKeyWithValue("fool", "barz"))
+
+		Expect(WithOption("=")(&ipamos)).NotTo(Succeed())
+		Expect(WithOption("blabla")(&ipamos)).NotTo(Succeed())
 	})
 
 	It("reports (IPAM) Pool errors", func() {

@@ -31,11 +31,11 @@ import (
 // container.
 //
 // Additionally, Run attaches to the container's input and output streams which
-// can be accessed using [rc.WithInput], and either [rc.WithCombinedOutput] or
-// [rc.WithDemuxedOutput].
+// can be accessed using [run.WithInput], and either [run.WithCombinedOutput] or
+// [run.WithDemuxedOutput].
 //
 // If the session has configured with labels, the new container inherits them.
-// Use [rc.ClearLabels] before [rc.WithLabel] or [rc.WithLabels] in order to
+// Use [run.ClearLabels] before [run.WithLabel] or [run.WithLabels] in order to
 // remove any inherited labels first.
 func (s *Session) Run(ctx context.Context, imageref string, opts ...run.Opt) (cntr *Container, err error) {
 	// Our interpretation of a "container run" command differs in some aspect
@@ -50,7 +50,9 @@ func (s *Session) Run(ctx context.Context, imageref string, opts ...run.Opt) (cn
 	}
 	maps.Copy(copts.Conf.Labels, s.opts.Labels) // inherit labels from session.
 	for _, opt := range opts {
-		opt(&copts)
+		if err := opt(&copts); err != nil {
+			return nil, err
+		}
 	}
 
 	if copts.Out == nil {
@@ -147,7 +149,7 @@ func (s *Session) Run(ctx context.Context, imageref string, opts ...run.Opt) (cn
 	}
 	details, err := s.moby.ContainerInspect(ctx, cntrID)
 	if err != nil {
-		return nil, err // removes new container
+		return nil, fmt.Errorf("cannot inspect newly started container, reason: %w", err)
 	}
 	cntr = &Container{
 		Name:    details.Name[1:],

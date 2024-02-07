@@ -60,7 +60,7 @@ func (s *Session) CreateNetwork(ctx context.Context, name string, opts ...net.Op
 		Verbose: true,
 	})
 	if err != nil {
-		_ = s.moby.NetworkRemove(ctx, name)
+		_ = s.moby.NetworkRemove(ctx, createResp.ID)
 		return nil, fmt.Errorf("cannot inspect newly created network %q, reason: %w",
 			name, err)
 	}

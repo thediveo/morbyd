@@ -15,6 +15,8 @@
 package net
 
 import (
+	"errors"
+
 	"github.com/docker/docker/api/types/network"
 	"github.com/thediveo/morbyd/ipam"
 
@@ -58,6 +60,12 @@ var _ = Describe("network options", func() {
 	It("rejects invalid net options", func() {
 		var opts Options
 		Expect(WithLabels("=")(&opts)).To(HaveOccurred())
+	})
+
+	It("rejects invalid IPAM options", func() {
+		failopt := func(*ipam.IPAM) error { return errors.New("error IJK305I") }
+		var opts Options
+		Expect(WithIPAM(failopt)(&opts)).To(HaveOccurred())
 	})
 
 })

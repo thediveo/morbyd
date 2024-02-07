@@ -61,9 +61,11 @@ func (c *Container) Refresh(ctx context.Context) error {
 // return nil. IP ignores addresses on a MACVLAN network, as IP addresses on a
 // MACVLAN network cannot reached from the host.
 //
-// Please note that this IP address is usable without the need to (publicly)
+// NOTE: the container's IP address is usable without the need to (publicly)
 // expose container ports on the host – which often is less than desirable in
-// tests.
+// tests. However, with Docker Desktop the container IPs aren't directly
+// reachable anymore as on plain Docker hosts, so in these cases you'll need to
+// expose a container's exposable ports on (preferably) loopback.
 func (c *Container) IP(ctx context.Context) net.IP {
 	// The container's own list of networks it is attached to unfortunately
 	// doesn't tell us what the driver is. However, we need to know in order to
@@ -75,7 +77,19 @@ func (c *Container) IP(ctx context.Context) net.IP {
 		if err != nil {
 			continue
 		}
-		if details.Driver == "macvlan" {
+		switch details.Driver {
+		case "macvlan":
+			continue
+		case "host":
+			// Note that a container with "net:host" cannot be connected to any
+			// other network, so this is a sufficient response.
+			return net.ParseIP("127.0.0.1")
+		case "null": // a.k.a. "net:none"
+			// Note that a container with "net:none" (lo only) cannot be
+			// connected to any other network, so this is a sufficient response.
+			return nil
+		}
+		if netw.IPAddress == "" {
 			continue
 		}
 		return net.ParseIP(netw.IPAddress)
@@ -83,7 +97,13 @@ func (c *Container) IP(ctx context.Context) net.IP {
 	return nil
 }
 
-// PID of the initial container process, as seen by the host.
+// PID of the initial container process, as seen by the container engine. In
+// case the container is restarting, it waits for the next Doctor, erm,
+// container incarnation to come online.
+//
+// Note to Docker Desktop users: the PID is only valid in the context of the
+// Docker engine that in case of macOS runs in its own VM, and in case of WSL2
+// in its own PID namespace in the same HyperV Linux VM.
 func (c *Container) PID(ctx context.Context) (int, error) {
 	for {
 		inspRes, err := c.Session.moby.ContainerInspect(ctx, c.ID)
@@ -112,16 +132,15 @@ func (c *Container) PID(ctx context.Context) (int, error) {
 }
 
 // Stop the container by sending it a termination signal. Default is SIGTERM,
-// unless changed using [rc.WithStopSignal].
+// unless changed using [run.WithStopSignal].
 func (c *Container) Stop(ctx context.Context) {
 	_ = c.Session.moby.ContainerStop(ctx, c.ID, container.StopOptions{})
 }
 
 // Wait for the container to finish, that is, become “not-running” in Docker API
-// parlance.
+// parlance. See also: [Docker's Client.ContainerWait].
 //
-// [Docker Client.ContainerWait]:
-// https://pkg.go.dev/github.com/docker/docker/client#Client.ContainerWait
+// [Docker's Client.ContainerWait]: https://pkg.go.dev/github.com/docker/docker/client#Client.ContainerWait
 func (c *Container) Wait(ctx context.Context) error {
 	// Nota bene: errch is buffered with size 1. The wait result channel is
 	// unbuffered though. ContainerWait EITHER sends an error OR on a result,
@@ -129,7 +148,8 @@ func (c *Container) Wait(ctx context.Context) error {
 	waitch, errch := c.Session.moby.ContainerWait(ctx, c.ID, container.WaitConditionNotRunning)
 	select {
 	case err := <-errch:
-		return err
+		return fmt.Errorf("waiting for container %q/%s to finish failed, reason: %w",
+			c.Name, c.AbbreviatedID(), err)
 	case <-waitch:
 		return nil
 	}

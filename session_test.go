@@ -16,22 +16,34 @@ package morbyd
 
 import (
 	"context"
+	"errors"
 	"io"
 	"os"
 	"time"
 
+	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
-
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 	"github.com/thediveo/morbyd/run"
 	"github.com/thediveo/morbyd/safe"
 	"github.com/thediveo/morbyd/session"
 	"github.com/thediveo/morbyd/timestamper"
+	mock "go.uber.org/mock/gomock"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gleak"
 	. "github.com/thediveo/success"
 )
 
-var _ = Describe("sessions", func() {
+var _ = Describe("test sessions", func() {
+
+	BeforeEach(func() {
+		goodgos := Goroutines()
+		DeferCleanup(func() {
+			Eventually(Goroutines).Within(2 * time.Second).ProbeEvery(100 * time.Millisecond).
+				ShouldNot(HaveLeaked(goodgos))
+		})
+	})
 
 	It("reports an error when the client cannot be created", func(ctx context.Context) {
 		origdockerhost := os.Getenv(client.EnvOverrideHost)
@@ -51,7 +63,9 @@ var _ = Describe("sessions", func() {
 	When("auto-cleaning", func() {
 
 		It("skips auto-cleaning without a label set", Serial, func(ctx context.Context) {
-			sess := Successful(NewSession(ctx))
+			ctrl := mock.NewController(GinkgoT())
+			sess := Successful(NewSession(ctx,
+				WithMockController(ctrl)))
 			DeferCleanup(func(ctx context.Context) {
 				sess.Close(ctx)
 			})
@@ -71,13 +85,50 @@ var _ = Describe("sessions", func() {
 				ShouldNot(HaventFoundContainer())
 		})
 
+		It("silently handles API network list errors", func(ctx context.Context) {
+			ctrl := mock.NewController(GinkgoT())
+			sess := Successful(NewSession(ctx,
+				WithMockController(ctrl, "NetworkList")))
+			DeferCleanup(func(ctx context.Context) {
+				sess.Close(ctx)
+			})
+			rec := sess.Client().(*MockClient).EXPECT()
+
+			rec.NetworkList(Any, Any).
+				Return(nil, errors.New("error IJK305I")) // ...real programmers ;)
+			sess.autoClean(ctx, "test.foo=bar")
+		})
+
+		It("silently handles API network removal errors", func(ctx context.Context) {
+			ctrl := mock.NewController(GinkgoT())
+			sess := Successful(NewSession(ctx,
+				WithMockController(ctrl, "NetworkList", "NetworkRemove")))
+			DeferCleanup(func(ctx context.Context) {
+				sess.Close(ctx)
+			})
+			rec := sess.Client().(*MockClient).EXPECT()
+
+			rec.NetworkList(Any, Any).
+				Return([]types.NetworkResource{
+					{ID: "42"},
+					{ID: "666"},
+				}, nil)
+			rec.NetworkRemove(Any, mock.Eq("42")).
+				Times(1).
+				Return(nil)
+			rec.NetworkRemove(Any, mock.Eq("666")).
+				Times(1).
+				Return(errors.New("error IJK305I"))
+			sess.autoClean(ctx, "test.foo=bar")
+		})
+
 	})
 
 	Context("with a session", Ordered, func() {
 
 		var sess *Session
 
-		BeforeAll(func(ctx context.Context) {
+		BeforeEach(func(ctx context.Context) {
 			sess = Successful(NewSession(ctx,
 				session.WithAutoCleaning("test.morbyd=session")))
 			DeferCleanup(func(ctx context.Context) {
@@ -127,6 +178,22 @@ var _ = Describe("sessions", func() {
 
 		})
 
+	})
+
+	It("detects Docker Desktop platform", func(ctx context.Context) {
+		ctrl := mock.NewController(GinkgoT())
+		sess := Successful(NewSession(ctx,
+			WithMockController(ctrl, "ServerVersion")))
+		DeferCleanup(func(ctx context.Context) {
+			sess.Close(ctx)
+		})
+		rec := sess.Client().(*MockClient).EXPECT()
+
+		rec.ServerVersion(Any).Return(types.Version{
+			Platform: struct{ Name string }{"foobar Desktop"},
+		}, nil)
+
+		Expect(sess.IsDockerDesktop(ctx)).To(BeTrue())
 	})
 
 })

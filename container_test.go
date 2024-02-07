@@ -16,18 +16,18 @@ package morbyd
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"io"
 	"math/rand"
-	"net/http"
 	"time"
 
-	"github.com/thediveo/morbyd/ipam"
-	"github.com/thediveo/morbyd/net"
+	types "github.com/docker/docker/api/types"
+	container "github.com/docker/docker/api/types/container"
 	"github.com/thediveo/morbyd/run"
 	"github.com/thediveo/morbyd/safe"
 	"github.com/thediveo/morbyd/session"
 	"github.com/thediveo/morbyd/timestamper"
+	mock "go.uber.org/mock/gomock"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -44,42 +44,6 @@ var _ = Describe("containers", Ordered, func() {
 		DeferCleanup(func(ctx context.Context) {
 			sess.Close(ctx)
 		})
-	})
-
-	When("asking for a container's IP", func() {
-
-		It("ignores MACVLAN IP addresses", func(ctx context.Context) {
-			const testnetname = "morbyd-mcwielahm"
-
-			netw := Successful(sess.CreateNetwork(ctx, testnetname,
-				net.WithDriver("macvlan"),
-				net.WithIPAM(ipam.WithPool("0.0.1.0/24"))))
-			cntr := Successful(sess.Run(ctx, "busybox",
-				run.WithCommand("/bin/sh", "-c", "trap 'exit 1' TERM; while true; do sleep 1; done"),
-				run.WithCombinedOutput(timestamper.New(GinkgoWriter)),
-				run.WithNetwork(netw.ID)))
-			Expect(cntr.IP(ctx)).To(BeNil())
-		})
-
-		It("returns an IP and we can talk to it", func(ctx context.Context) {
-			const testnetname = "morbyd-bridge"
-			netw := Successful(sess.CreateNetwork(ctx, testnetname))
-			cntr := Successful(sess.Run(ctx, "busybox",
-				run.WithCommand("/bin/sh", "-c",
-					"mkdir /www; echo \"Hellorld!\" > /www/index.html; "+
-						"httpd -v -f -h /www"),
-				run.WithCombinedOutput(timestamper.New(GinkgoWriter)),
-				run.WithNetwork(netw.ID)))
-			ip := cntr.IP(ctx)
-			Expect(ip).NotTo(BeNil())
-			get := Successful(http.NewRequestWithContext(ctx,
-				http.MethodGet, fmt.Sprintf("http://%s/", ip), nil))
-			resp := Successful(http.DefaultClient.Do(get))
-			defer resp.Body.Close()
-			body := Successful(io.ReadAll(resp.Body))
-			Expect(string(body)).To(Equal("Hellorld!\n"))
-		})
-
 	})
 
 	It("waits for a container to finish", func(ctx context.Context) {
@@ -136,4 +100,40 @@ var _ = Describe("containers", Ordered, func() {
 		Expect(c.AbbreviatedID()).To(Equal(string(id)[:AbbreviatedIDLength]))
 	})
 
+	It("returns an error when container refresh fails", func(ctx context.Context) {
+		ctrl := mock.NewController(GinkgoT())
+		sess := Successful(NewSession(ctx,
+			WithMockController(ctrl, "ContainerInspect")))
+		DeferCleanup(func(ctx context.Context) {
+			sess.Close(ctx)
+		})
+		rec := sess.Client().(*MockClient).EXPECT()
+
+		rec.ContainerInspect(Any, Any).Return(types.ContainerJSON{}, errors.New("error IJK305I"))
+
+		cntr := &Container{Session: sess, ID: "bad1dea"}
+		Expect(cntr.Refresh(ctx)).Error().To(MatchError(ContainSubstring("cannot refresh details of container")))
+	})
+
+	It("returns an error when waiting fails", func(ctx context.Context) {
+		ctrl := mock.NewController(GinkgoT())
+		sess := Successful(NewSession(ctx,
+			WithMockController(ctrl, "ContainerWait")))
+		DeferCleanup(func(ctx context.Context) {
+			sess.Close(ctx)
+		})
+		rec := sess.Client().(*MockClient).EXPECT()
+
+		errch := make(chan error, 1)
+		rec.ContainerWait(Any, Any, Any).Return(make(chan container.WaitResponse), errch)
+
+		errch <- errors.New("error IJK305I")
+		cntr := &Container{
+			Session: sess,
+			Name:    "foobar",
+			ID:      "deadbeefc0011dea",
+		}
+		Expect(cntr.Wait(ctx)).Error().To(MatchError(ContainSubstring("waiting for container")))
+
+	})
 })

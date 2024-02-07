@@ -17,48 +17,74 @@ package morbyd
 import (
 	"bytes"
 	"context"
+	"errors"
+	"io"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gleak"
-	"github.com/thediveo/morbyd/session"
 	. "github.com/thediveo/success"
+	mock "go.uber.org/mock/gomock"
 )
 
-var _ = Describe("pulling images", Ordered, func() {
-
-	var sess *Session
-
-	BeforeAll(func(ctx context.Context) {
-		sess = Successful(NewSession(ctx,
-			session.WithAutoCleaning("test.morbyd=")))
-		DeferCleanup(func(ctx context.Context) {
-			// not strictly necessary as we're doing it anyway after each
-			// individual test in order to check for leaked go routines.
-			sess.Close(ctx)
-		})
-	})
+var _ = Describe("pulling images", func() {
 
 	BeforeEach(func(ctx context.Context) {
 		goodgos := Goroutines()
 		DeferCleanup(func() {
-			sess.Close(ctx)
 			Eventually(Goroutines).Within(2 * time.Second).ProbeEvery(250 * time.Millisecond).
 				ShouldNot(HaveLeaked(goodgos))
 		})
 	})
 
 	It("pulls an image", func(ctx context.Context) {
+		ctrl := mock.NewController(GinkgoT())
+		sess := Successful(NewSession(ctx,
+			WithMockController(ctrl, "ImagePull")))
+		DeferCleanup(func(ctx context.Context) {
+			sess.Close(ctx)
+		})
+		rec := sess.Client().(*MockClient).EXPECT()
+
+		rc := io.NopCloser(strings.NewReader(`
+{"status":"foobar"}
+`))
+		rec.ImagePull(Any, Any, Any).Return(rc, nil)
+
 		var buff bytes.Buffer
-		Expect(sess.PullImage(ctx, "busybox:latest", WithPullImageOutput(&buff))).To(Succeed())
-		Expect(buff.String()).To(ContainSubstring("latest: Pulling from library/busybox"))
+		Expect(sess.PullImage(ctx, "buzzybocks:earliest", WithPullImageOutput(&buff))).To(Succeed())
+		Expect(buff.String()).To(Equal("foobar\n"))
 	})
 
-	It("reports errors", func() {
-		ctx, cancel := context.WithCancel(context.Background())
-		cancel()
-		Expect(sess.PullImage(ctx, "")).NotTo(Succeed())
+	It("reports API errors", func(ctx context.Context) {
+		ctrl := mock.NewController(GinkgoT())
+		sess := Successful(NewSession(ctx,
+			WithMockController(ctrl, "ImagePull")))
+		DeferCleanup(func(ctx context.Context) {
+			sess.Close(ctx)
+		})
+		rec := sess.Client().(*MockClient).EXPECT()
+		rec.ImagePull(Any, Any, Any).Return(nil, errors.New("error IJK305I"))
+
+		Expect(sess.PullImage(ctx, "buzzybocks:earliest")).NotTo(Succeed())
+	})
+
+	It("reports stream errors", func(ctx context.Context) {
+		ctrl := mock.NewController(GinkgoT())
+		sess := Successful(NewSession(ctx,
+			WithMockController(ctrl, "ImagePull")))
+		DeferCleanup(func(ctx context.Context) {
+			sess.Close(ctx)
+		})
+		rec := sess.Client().(*MockClient).EXPECT()
+		rc := io.NopCloser(strings.NewReader(`
+{"errorDetail":{"code":666,"message":"error IJK305I"}}
+`))
+		rec.ImagePull(Any, Any, Any).Return(rc, nil)
+
+		Expect(sess.PullImage(ctx, "buzzybocks:earliest")).NotTo(Succeed())
 	})
 
 })

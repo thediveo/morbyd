@@ -23,6 +23,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
+	"github.com/thediveo/morbyd/moby"
 	"github.com/thediveo/morbyd/session"
 )
 
@@ -31,7 +32,7 @@ import (
 // and networks.
 type Session struct {
 	opts session.Options
-	moby *client.Client
+	moby moby.Client
 }
 
 // NewSession creates a new Docker client and test session, returning a Session
@@ -61,12 +62,15 @@ func NewSession(ctx context.Context, opts ...session.Opt) (*Session, error) {
 		return nil, err
 	}
 	s.moby = moby
+	if s.opts.Wrapper != nil {
+		s.moby = s.opts.Wrapper(s.moby)
+	}
 	s.AutoClean(ctx)
 	return s, nil
 }
 
 // Client returns the Docker client used in this test session.
-func (s *Session) Client() *client.Client { return s.moby }
+func (s *Session) Client() moby.Client { return s.moby }
 
 // Close removes left-over containers and networks if auto-cleaning has been
 // enabled, and then closes idle HTTP connections to the Docker daemon.
@@ -83,9 +87,11 @@ func (s *Session) AutoClean(ctx context.Context) {
 	if s.opts.AutoCleaningLabel == "" {
 		return
 	}
+	s.autoClean(ctx, s.opts.AutoCleaningLabel)
+}
 
+func (s *Session) autoClean(ctx context.Context, aclabel string) {
 	// Assemble a filter based on the auto-cleaning label.
-	aclabel := s.opts.AutoCleaningLabel
 	key, value, _ := strings.Cut(aclabel, "=")
 	if value == "" {
 		aclabel = key // just the key, no trailing "=" in case of a zero value.
@@ -118,10 +124,7 @@ func (s *Session) AutoClean(ctx context.Context) {
 		return
 	}
 	for _, net := range nets {
-		err := s.moby.NetworkRemove(ctx, net.ID)
-		if err != nil {
-			return
-		}
+		_ = s.moby.NetworkRemove(ctx, net.ID)
 	}
 }
 
@@ -160,4 +163,16 @@ func (s *Session) Network(ctx context.Context, nameID string) (*Network, error) 
 		Details: details,
 	}
 	return netw, nil
+}
+
+// IsDockerDesktop returns true if the Docker engine is the Docker Desktop
+// engine, as opposed to a “plain” Docker engine. This differentiation is
+// important in some situation, as containers managed by Docker Desktop cannot
+// be directly reached from the host, but always require ports to be published.
+func (s *Session) IsDockerDesktop(ctx context.Context) bool {
+	info, err := s.moby.ServerVersion(ctx)
+	if err != nil {
+		return false
+	}
+	return strings.Contains(info.Platform.Name, "Desktop")
 }
