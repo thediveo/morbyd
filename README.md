@@ -25,6 +25,26 @@ options in packages, such as `run` for "_run_ container" and `exec` for
 otherwise clash across different API operations for common configuration
 elements, such as names, labels, and options.
 
+- [Session.BuildImage](https://pkg.go.dev/github.com/thediveo/morbyd#Session.BuildImage):
+  options are in the
+  [build](https://pkg.go.dev/github.com/thediveo/morbyd/build) package, such as
+  [WithDockerfile](https://pkg.go.dev/github.com/thediveo/morbyd/build#WithDockerfile),
+  ...
+- [Session.Run](https://pkg.go.dev/github.com/thediveo/morbyd#Session.Run) a new
+  container: options are in the
+  [run](https://pkg.go.dev/github.com/thediveo/morbyd/run) package, such as
+  [WithCommand](https://pkg.go.dev/github.com/thediveo/morbyd/run#WithCommand)...
+- [Container.Exec](https://pkg.go.dev/github.com/thediveo/morbyd#Container.Exec)ute
+  a command inside a container: options are in the
+  [exec](https://pkg.go.dev/github.com/thediveo/morbyd/exec) package, such as
+  [WithCombinedOutput](https://pkg.go.dev/github.com/thediveo/morbyd/exec#WithCombinedOutput)...
+- [Session.CreateNetwork](https://pkg.go.dev/github.com/thediveo/morbyd#Session.CreateNetwork):
+  with options in the [net](https://pkg.go.dev/github.com/thediveo/morbyd/net)
+  and [bridge](https://pkg.go.dev/github.com/thediveo/morbyd/net/bridge),
+  [macvlan](https://pkg.go.dev/github.com/thediveo/morbyd/net/macvlan),
+  [ipvlan](https://pkg.go.dev/github.com/thediveo/morbyd/net/ipvlan) sub
+  packages.
+
 ## Features of morbyd
 
   - testable examples for common tasks to get you quickly up and running. Please
