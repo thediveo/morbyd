@@ -18,12 +18,23 @@ fi
 # files...
 GOCOVERTMPDIR="$(mktemp -d)"
 trap 'rm -rf -- "$GOCOVERTMPDIR"' EXIT
+# We want to test with coverage, however we want to exclude one package for now
+# from the coverage calculations: the dockercli package (also Apache License 2.0
+# as our module) contains a few helpers related to mount, volume, and network
+# options. However, as these are virtually vendored, we don't include their
+# tests and we also don't want to get this missing coverage into our totals.
+# While the go toolchain allows narrowing the packages covered, it doesn't
+# support specifying exclusions, forcing us to explicitly list all packages to
+# be included in coverage calculations...
+IGNORE_PKGS=("github.com/thediveo/morbyd/run/dockercli")
+FILTER_PATTERN="$(printf '^%s$|' "${IGNORE_PKGS[@]}" | sed 's/|$//')"
+COVERPKG_LIST=$(go list ./... | grep -v -E "${FILTER_PATTERN}" | tr '\n' ',' | sed 's/,$//')
 # Now run the (unit) tests with coverage, but don't use the existing textual
 # format and instead tell "go test" to produce the new binary coverage data file
 # format. This way we can easily run multiple coverage (integration) tests, as
 # needed, without worrying about how to aggregate the coverage data later. The
-# new Go toolchain already does this for us. 
-go test -cover -v -tags=matchers -p=1 -count=1 -race ./... -args -test.gocoverdir="$GOCOVERTMPDIR"
+# new Go toolchain already does this for us.
+go test -coverpkg="${COVERPKG_LIST}" -v -tags=matchers -p=1 -count=1 -race ./... -args -test.gocoverdir="$GOCOVERTMPDIR"
 # Finally transform the coverage information collected in potentially multiple
 # runs into the well-proven textual format so we can process it as we have come
 # to learn and love.

@@ -11,7 +11,7 @@ Subpackages provide further driver-specific options:
 To create a new internal custom Docker network, including IPAM pool
 configuration and bridge-specific configuration:
 
-	morbyd.NewNetwork(ctx, "my-custom-notwork",
+	sess.CreateNetwork(ctx, "my-custom-notwork",
 	    net.WithInternal(),
 	    bridge.WithBridgeName("brrr-42"),
 	    net.WithIPAM(ipam.WithPool("0.0.1.0/24", ipam.WithRange("0.0.1.16/28"))),
