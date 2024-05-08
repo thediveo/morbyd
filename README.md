@@ -56,6 +56,9 @@ elements, such as names, labels, and options.
     completion. No more pseudo option function "callbacks" that are none the
     better than passing the original Docker config type verbatim.
 
+    - allows you to add your own (missing?) option functions, as all
+      option-related types are exported.
+
   - uses the [official Docker Go
     client](https://pkg.go.dev/github.com/docker/docker/client) in order to
     benefit from its security fixes, functional upgrades, and all the other nice
@@ -108,7 +111,7 @@ func main() {
 
     cntr, _ := sess.Run(ctx, "busybox",
         run.WithCommand("/bin/sh", "-c", "while true; do sleep 1; done"),
-        run.WithAutRemove(),
+        run.WithAutoRemove(),
         run.WithCombinedOutput(os.Stdout))
     defer cntr.Stop(ctx)
 
@@ -127,7 +130,7 @@ battle-proven tools for using Docker images and containers in Go tests?
 - for years, [@ory/dockertest](https://github.com/ory/dockertest) has served me
   well. Yet I eventually hit its limitations hard: for instance, dockertest
   cannot handle Docker's `100 CONTINUE` API protocol upgrades, because of its
-  own proprietary Docker client implementation. However, this functionatly is
+  own proprietary Docker client implementation. However, this functionality is
   essential in streaming container and command output and input – and thus only
   allowing diagnosing tests. Such issues are unresponded and unfixed. In
   addition, having basically to pass functions for configuration of Docker data
