@@ -17,13 +17,16 @@ package run
 import (
 	"fmt"
 	"io"
+	"net"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/strslice"
+	"github.com/docker/go-connections/nat"
 	lbls "github.com/thediveo/morbyd/labels"
 	"github.com/thediveo/morbyd/run/dockercli"
 	"github.com/thediveo/morbyd/strukt"
@@ -277,6 +280,117 @@ func WithPIDMode(mode string) Opt {
 		o.Host.PidMode = container.PidMode(mode)
 		return nil
 	}
+}
+
+// WithPublishedPort exposes a container's port on the host, similar to the “-p”
+// and “--publish” flags in the “docker create” and “docker run” CLI commands.
+// The mapping syntax supported is a superset of Docker's, supporting a random
+// host port while binding to a specific host IP address only:
+//
+//	[HOSTIP:][HOSTPORT:]CONTAINERPORT[/L4PROTO]
+//
+// An IPv6 HOSTIP needs to be in “[::]” format.
+//
+// Illustrative examples:
+//
+//   - "1234" publishes the container's TCP port 1234 on a random, available host
+//     TCP port, bound to the host's unspecified IP address(es).
+//   - "1234/tcp" is the same as "1234".
+//   - "1234:1234" publishes the container's TCP port 1234 on the host's TCP port
+//     1234, bound to the host's unspecified IP address(es).
+//   - (superset) "127.0.0.1:1234" publishes the container's TCP port 1234 on a
+//     random, available host TCP port, bound the the IPv4 loopback address
+//     127.0.0.1.
+//   - (superset) "127.0.0.1:1234/tcp" is the same as "127.0.0.1:1234".
+//   - "127.0.0.1:666:1234" publishes the container's TCP port 1234 on the host's
+//     TCP port 666, bound to the IPv4 loopback address 127.0.0.1.
+//   - "[::1]:1234" publishes the container's TCP port 1234 on a random, available
+//     host TCP port, bound the the host's IPv6 loopback address ::1.
+func WithPublishedPort(mapping string) Opt {
+	return func(o *Options) error {
+		bindIP, hostPort, cntrPort, l4proto, err := parsePortMapping(mapping)
+		if err != nil {
+			return err
+		}
+		// ouch, we need to set also ExposedPorts, otherwise the PortBindings
+		// get ignored.
+		if o.Conf.ExposedPorts == nil {
+			o.Conf.ExposedPorts = nat.PortSet{}
+		}
+		if o.Host.PortBindings == nil {
+			o.Host.PortBindings = nat.PortMap{}
+		}
+		portProto := fmt.Sprintf("%d/%s", cntrPort, l4proto)
+		var ip string
+		if bindIP != nil {
+			ip = bindIP.String()
+		}
+		o.Conf.ExposedPorts[nat.Port(portProto)] = struct{}{}
+		o.Host.PortBindings[nat.Port(portProto)] = append(o.Host.PortBindings[nat.Port(portProto)], nat.PortBinding{
+			HostIP:   ip,
+			HostPort: strconv.FormatUint(uint64(hostPort), 10),
+		})
+		return nil
+	}
+}
+
+func parsePortMapping(mapping string) (bindIP net.IP, hostPort uint16, cntrPort uint16, l4proto string, err error) {
+	// Split off the optional transport protocol protocol name and default
+	// to "tcp" if not specified.
+	addrsports, l4proto, _ := strings.Cut(mapping, "/")
+	if l4proto == "" {
+		l4proto = "tcp"
+	}
+	// Strip off the IPv6 address, if present, before we proceed to chop the
+	// mapping into pieces.
+	if strings.HasPrefix(addrsports, "[") {
+		var ip string
+		var ok bool
+		ip, addrsports, ok = strings.Cut(addrsports, "]:")
+		if !ok {
+			return reportPortMappingError(mapping)
+		}
+		bindIP = net.ParseIP(ip[1:])
+		if bindIP == nil {
+			return reportPortMappingError(mapping)
+		}
+	}
+	// Now chop the mapping into at most three fields, or at most two fields
+	// we had already just chopped off the IPv6 address.
+	fields := strings.Split(addrsports, ":")
+	if len(fields) > 3 || (bindIP != nil && len(fields) > 2) {
+		return reportPortMappingError(mapping)
+	}
+	// Does the first field look like an IPv4 address in case we hadn't already
+	// an IPv6 address?
+	if bindIP == nil {
+		bindIP = net.ParseIP(fields[0])
+		if bindIP != nil {
+			if ipv4 := bindIP.To4(); ipv4 != nil {
+				bindIP = ipv4
+			}
+			fields = fields[1:]
+		}
+	}
+	if len(fields) == 2 {
+		hp, err := strconv.ParseUint(fields[0], 10, 16)
+		if err != nil {
+			return reportPortMappingError(mapping)
+		}
+		hostPort = uint16(hp)
+		fields = fields[1:]
+	}
+	cp, err := strconv.ParseUint(fields[0], 10, 16)
+	if err != nil || cp == 0 {
+		return reportPortMappingError(mapping)
+	}
+	cntrPort = uint16(cp)
+	return // sic!
+}
+
+func reportPortMappingError(mapping string) (bindIP net.IP, hostPort uint16, cntrPort uint16, l4proto string, err error) {
+	return nil, 0, 0, "", fmt.Errorf("invalid port publishing mapping, expected [HOSTIP:][HOSTPORT:]CONTAINERPORT[/L4PROTO], got: %s",
+		mapping)
 }
 
 // WithVolume adds a volume, in the format “source:target:options”. Please

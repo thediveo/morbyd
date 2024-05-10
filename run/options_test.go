@@ -16,12 +16,14 @@ package run
 
 import (
 	"bytes"
+	"net"
 	"os"
 	"strings"
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
+	"github.com/docker/go-connections/nat"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -107,6 +109,9 @@ var _ = Describe("run (container) options", func() {
 			WithHostname("foohost"),
 			WithRestartPolicy("always", 666),
 			WithAllPortsPublished(),
+			WithPublishedPort("[fe80::dead:beef]:2345:1234"),
+			WithPublishedPort("127.0.0.1:1234"),
+			WithPublishedPort("127.0.0.2:12345/udp"),
 			WithCustomInit(),
 		)
 
@@ -147,7 +152,21 @@ var _ = Describe("run (container) options", func() {
 			Name:              "always",
 			MaximumRetryCount: 666,
 		}))
+
 		Expect(o.Host.PublishAllPorts).To(BeTrue())
+		Expect(o.Conf.ExposedPorts).To(HaveLen(2))
+		Expect(o.Conf.ExposedPorts).To(HaveKey(nat.Port("1234/tcp")))
+		Expect(o.Conf.ExposedPorts).To(HaveKey(nat.Port("12345/udp")))
+		Expect(o.Host.PortBindings).To(HaveLen(2))
+		Expect(o.Host.PortBindings).To(HaveKeyWithValue(
+			nat.Port("1234/tcp"),
+			ConsistOf(
+				nat.PortBinding{HostIP: "127.0.0.1", HostPort: "0"},
+				nat.PortBinding{HostIP: "fe80::dead:beef", HostPort: "2345"})))
+		Expect(o.Host.PortBindings).To(HaveKeyWithValue(
+			nat.Port("12345/udp"),
+			ConsistOf(nat.PortBinding{HostIP: "127.0.0.2", HostPort: "0"})))
+
 		Expect(o.Host.Init).To(gstruct.PointTo(BeTrue()))
 
 		o = opts(WithLabel("foo=bar"))
@@ -158,6 +177,11 @@ var _ = Describe("run (container) options", func() {
 
 		o = opts(WithTmpfsOpts("/temp", "tmpfs-size=42"))
 		Expect(o.Host.Tmpfs).To(HaveKeyWithValue("/temp", "tmpfs-size=42"))
+	})
+
+	It("rejects invalid published port mappings", func() {
+		var o Options
+		Expect(WithPublishedPort("abcd")(&o)).To(HaveOccurred())
 	})
 
 	It("rejects invalid volume specs", func() {
@@ -225,4 +249,53 @@ var _ = Describe("run (container) options", func() {
 		Expect(WithNetwork("foo=bar")(&o)).NotTo(Succeed())
 	})
 
+	DescribeTable("published port mapping syntax",
+		func(mapping string, expectedIP net.IP, expectedHostPort int, expectedCntrPort int, expectedL4Proto string, ok bool) {
+			ip, hp, cp, l4p, err := parsePortMapping(mapping)
+			if !ok {
+				Expect(err).To(HaveOccurred())
+				Expect(ip).To(BeNil())
+				Expect(hp).To(BeZero())
+				Expect(cp).To(BeZero())
+				Expect(l4p).To(BeEmpty())
+				return
+			}
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ip).To(Equal(expectedIP))
+			Expect(hp).To(Equal(uint16(expectedHostPort)))
+			Expect(cp).To(Equal(uint16(expectedCntrPort)))
+			Expect(l4p).To(Equal(expectedL4Proto))
+		},
+
+		Entry(nil, "", nil, 0, 0, "", false),
+
+		// Nope
+		Entry(nil, "0", nil, 0, 0, "", false),
+		Entry(nil, "123abc", nil, 0, 0, "", false),
+		Entry(nil, "2345:123abc", nil, 0, 0, "", false),
+		Entry(nil, "2345xyz:123abc", nil, 0, 0, "", false),
+
+		// Everything wrong with a potential IPv6 host address...
+		Entry(nil, "[1234:", nil, 0, 0, "", false),
+		Entry(nil, "[1234]", nil, 0, 0, "", false),
+		Entry(nil, "[1234]:", nil, 0, 0, "", false),
+
+		// Aisle of Plenty :D
+		Entry(nil, "[::1]:2345:1234:7890", nil, 0, 0, "", false),
+		Entry(nil, "127.0.0.1:2345:1234:7890", nil, 0, 0, "", false),
+
+		// Oddballs, odd, yet fine.
+		Entry(nil, "1234/tcp/udp", nil, 0, 1234, "tcp/udp", true),
+
+		// Good cases.
+		Entry(nil, "1234", nil, 0, 1234, "tcp", true),
+		Entry(nil, "1234/udp", nil, 0, 1234, "udp", true),
+
+		Entry(nil, "127.0.0.1:1234", net.ParseIP("127.0.0.1").To4(), 0, 1234, "tcp", true),
+		Entry(nil, "[::1]:1234", net.ParseIP("::1"), 0, 1234, "tcp", true),
+
+		Entry(nil, "2345:1234", nil, 2345, 1234, "tcp", true),
+		Entry(nil, "127.0.0.1:2345:1234", net.ParseIP("127.0.0.1").To4(), 2345, 1234, "tcp", true),
+		Entry(nil, "[::1]:2345:1234", net.ParseIP("::1"), 2345, 1234, "tcp", true),
+	)
 })
