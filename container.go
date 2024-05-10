@@ -18,9 +18,12 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"strconv"
+	"strings"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/go-connections/nat"
 )
 
 // AbbreviatedIDLength defines the number of hex digits of a container ID to
@@ -170,4 +173,40 @@ func (c *Container) AbbreviatedID() string {
 		return c.ID
 	}
 	return c.ID[:AbbreviatedIDLength]
+}
+
+// PublishedPort returns the host IP address(es) and port(s) that forward to the
+// transport-layer port and protocol of this container, such as “1234” or
+// “1234/tcp”. If the transport-layer protocol is left unspecified, “tcp” is
+// assumed by default.
+//
+// If there is no such port (with protocol) published, PublishedPort returns an
+// empty [Addrs] list.
+//
+// In order to easily connect to a published container service, a suitable IP
+// address string including port number can be determined as follows:
+//
+//	// for instance, returns "127.0.0.1:32890"
+//	svcAddrPort := cntr.PublishedPort("1234").Any().UnspecifiedAsLoopback().String
+func (c *Container) PublishedPort(portproto string) Addrs {
+	if !strings.Contains(portproto, "/") {
+		portproto += "/tcp"
+	}
+	_, l4proto, _ := strings.Cut(portproto, "/")
+	addrs := Addrs{}
+	for _, boundport := range c.Details.NetworkSettings.Ports[nat.Port(portproto)] {
+		ip := net.ParseIP(boundport.HostIP)
+		if ip == nil {
+			continue
+		}
+		if ip4 := ip.To4(); ip4 != nil {
+			ip = ip4 // compact IPv4 addresses
+		}
+		port, err := strconv.ParseUint(boundport.HostPort, 10, 16)
+		if err != nil {
+			continue
+		}
+		addrs = append(addrs, NewAddr(ip, uint16(port), l4proto))
+	}
+	return addrs
 }
