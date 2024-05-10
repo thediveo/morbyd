@@ -10,11 +10,13 @@
 ![Coverage](https://img.shields.io/badge/Coverage-99.6%25-brightgreen)
 
 `morbyd` is a thin layer on top of the standard Docker Go client to easily build
-and run throw-away test Docker images and containers. And to run commands inside
-these containers. In particular, `morbyd` hides the gory details of how to
-stream the output, and optionally input, of container and commands via Dockers
-API. You just use your `io.Writer`s and `io.Reader`s, for instance, to reason
-about the expected output.
+and run throw-away test Docker images and containers. And to easily run commands
+inside these containers.
+
+In particular, `morbyd` hides the gory details of how to stream the output, and
+optionally input, of container and commands via Dockers API. You just use your
+`io.Writer`s and `io.Reader`s, for instance, to reason about the expected
+output.
 
 This module makes heavy use of [option
 functions](https://dave.cheney.net/2014/10/17/functional-options-for-friendly-apis).
@@ -86,6 +88,8 @@ ephemeral – test containers.
 
 ## Usage
 
+### Run Container and Pick Up Its Output
+
 ```go
 package main
 
@@ -113,12 +117,50 @@ func main() {
         run.WithCommand("/bin/sh", "-c", "while true; do sleep 1; done"),
         run.WithAutoRemove(),
         run.WithCombinedOutput(os.Stdout))
-    defer cntr.Stop(ctx)
 
     cmd, _ := cntr.Exec(ctx,
         exec.WithCommand("/bin/sh", "-c", "echo \"Hellorld!\""),
         exec.WithCombinedOutput(os.Stdout))
     exitcode, _ := cmd.Wait(ctx)
+}
+```
+
+### Deploy Container and Contact Its Published Service
+
+```go
+package main
+
+import (
+    "context"
+
+    "github.com/thediveo/morbyd"
+    "github.com/thediveo/morbyd/exec"
+    "github.com/thediveo/morbyd/run"
+    "github.com/thediveo/morbyd/session"
+)
+
+func main() {
+    ctx := context.TODO()
+    // note: error handling left out for brevity
+    //
+    // note: enable auto-cleaning of left-over containers and
+    // networks, both when creating the session as well as when
+    // closing the session. Use a unique label either in form of
+    // "key=" or "key=value".
+    sess, _ := morbyd.NewSession(ctx, session.WithAutoCleaning("test.mytest="))
+    defer sess.Close(ctx)
+
+    cntr, _ := sess.Run(ctx, "busybox",
+        run.WithCommand("/bin/sh", "-c", `echo "DOH!" > index.html && httpd -f -p 1234`),
+        run.WithAutoRemove(),
+        		run.WithPublishedPort("127.0.0.1:1234"))
+
+    svcAddrPort := container.PublishedPort("1234").Any().UnspecifiedAsLoopback().String()
+    req, _ := http.NewRequest(http.MethodGet, "http://"+svcAddrPort+"/", nil)
+    resp, _ := http.DefaultClient.Do(req.WithContext(ctx))
+    defer resp.Body.Close()
+    body, _ := io.ReadAll(resp.Body)
+    fmt.Sprintf("%s\n", body)
 }
 ```
 
