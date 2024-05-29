@@ -20,6 +20,8 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/thediveo/morbyd/run"
+	"github.com/thediveo/morbyd/session"
 	mock "go.uber.org/mock/gomock"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -146,6 +148,45 @@ var _ = Describe("getting container PIDs", Ordered, func() {
 
 		cntr := &Container{Session: sess, ID: "bad1dea"}
 		Expect(cntr.PID(ctx)).Error().To(HaveOccurred())
+	})
+
+	Context("handling a failed container", func() {
+
+		It("doesn't wait endless for PID of failed container", func(ctx context.Context) {
+			sess := Successful(NewSession(ctx, session.WithAutoCleaning("test.morbid=pid")))
+			DeferCleanup(func(ctx context.Context) { sess.Close(ctx) })
+
+			By("creating a crashed container")
+			cntr := Successful(sess.Run(ctx,
+				"busybox",
+				run.WithCommand("/bin/sh", "-c", "this feels wrong"),
+				run.WithAutoRemove(),
+				run.WithCombinedOutput(GinkgoWriter)))
+			By("(not) getting PID of crashed container")
+			Eventually(func(ctx context.Context) error {
+				_, err := cntr.PID(ctx)
+				return err
+			}).WithContext(ctx).
+				Within(2 * time.Second).ProbeEvery(100 * time.Millisecond).
+				ShouldNot(Succeed())
+		})
+
+		It("doesn't wait endless for failed container", func(ctx context.Context) {
+			sess := Successful(NewSession(ctx, session.WithAutoCleaning("test.morbid=pid")))
+			DeferCleanup(func(ctx context.Context) { sess.Close(ctx) })
+
+			By("creating a crashed container")
+			cntr := Successful(sess.Run(ctx,
+				"busybox",
+				run.WithCommand("/bin/sh", "-c", "this feels wrong"),
+				run.WithAutoRemove(),
+				run.WithCombinedOutput(GinkgoWriter)))
+			By("waiting for crashed container")
+			ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+			defer cancel()
+			Expect(cntr.Wait(ctx)).To(Succeed())
+		})
+
 	})
 
 })
