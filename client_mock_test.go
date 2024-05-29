@@ -265,7 +265,7 @@ func (mr *MockClientMockRecorder) ImageBuild(arg0, arg1, arg2 any) *gomock.Call 
 }
 
 // ImageList mocks base method.
-func (m *MockClient) ImageList(arg0 context.Context, arg1 types.ImageListOptions) ([]image.Summary, error) {
+func (m *MockClient) ImageList(arg0 context.Context, arg1 image.ListOptions) ([]image.Summary, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ImageList", arg0, arg1)
 	ret0, _ := ret[0].([]image.Summary)
@@ -280,7 +280,7 @@ func (mr *MockClientMockRecorder) ImageList(arg0, arg1 any) *gomock.Call {
 }
 
 // ImagePull mocks base method.
-func (m *MockClient) ImagePull(arg0 context.Context, arg1 string, arg2 types.ImagePullOptions) (io.ReadCloser, error) {
+func (m *MockClient) ImagePull(arg0 context.Context, arg1 string, arg2 image.PullOptions) (io.ReadCloser, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ImagePull", arg0, arg1, arg2)
 	ret0, _ := ret[0].(io.ReadCloser)
@@ -295,7 +295,7 @@ func (mr *MockClientMockRecorder) ImagePull(arg0, arg1, arg2 any) *gomock.Call {
 }
 
 // ImageRemove mocks base method.
-func (m *MockClient) ImageRemove(arg0 context.Context, arg1 string, arg2 types.ImageRemoveOptions) ([]image.DeleteResponse, error) {
+func (m *MockClient) ImageRemove(arg0 context.Context, arg1 string, arg2 image.RemoveOptions) ([]image.DeleteResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ImageRemove", arg0, arg1, arg2)
 	ret0, _ := ret[0].([]image.DeleteResponse)

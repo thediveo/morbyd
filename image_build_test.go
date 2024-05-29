@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
+	image "github.com/docker/docker/api/types/image"
 	"github.com/thediveo/morbyd/build"
 	"github.com/thediveo/morbyd/session"
 	mock "go.uber.org/mock/gomock"
@@ -100,7 +101,7 @@ var _ = Describe("build image", Ordered, func() {
 		It("builds an image and finds the correct stage build output canary", func(ctx context.Context) {
 			const imageref = "morbyd/buzzybocks"
 
-			_, _ = sess.Client().ImageRemove(ctx, imageref, types.ImageRemoveOptions{})
+			_, _ = sess.Client().ImageRemove(ctx, imageref, image.RemoveOptions{})
 
 			var buff bytes.Buffer
 			id := Successful(sess.BuildImage(ctx, "_test/buzzybocks",
@@ -110,7 +111,7 @@ var _ = Describe("build image", Ordered, func() {
 			))
 			Expect(id).NotTo(BeEmpty())
 			Expect(sess.Client().ImageRemove(
-				ctx, imageref, types.ImageRemoveOptions{})).Error().To(
+				ctx, imageref, image.RemoveOptions{})).Error().To(
 				Succeed())
 			Expect(buff.String()).To(ContainSubstring("..WORLD.."))
 		})
@@ -124,7 +125,7 @@ var _ = Describe("build image", Ordered, func() {
 			Expect(err).To(HaveOccurred())
 			Expect(id).To(BeEmpty())
 			Expect(sess.Client().ImageRemove(
-				ctx, imageref, types.ImageRemoveOptions{})).Error().To(
+				ctx, imageref, image.RemoveOptions{})).Error().To(
 				MatchError(ContainSubstring("from daemon: No such image: " + imageref)))
 		})
 

@@ -52,9 +52,9 @@ type Client interface {
 	ContainerExecInspect(ctx context.Context, execID string) (types.ContainerExecInspect, error)
 
 	ImageBuild(ctx context.Context, buildContext io.Reader, options types.ImageBuildOptions) (types.ImageBuildResponse, error)
-	ImageList(ctx context.Context, options types.ImageListOptions) ([]image.Summary, error)
-	ImagePull(ctx context.Context, refStr string, options types.ImagePullOptions) (io.ReadCloser, error)
-	ImageRemove(ctx context.Context, imageID string, options types.ImageRemoveOptions) ([]image.DeleteResponse, error)
+	ImageList(ctx context.Context, options image.ListOptions) ([]image.Summary, error)
+	ImagePull(ctx context.Context, refStr string, options image.PullOptions) (io.ReadCloser, error)
+	ImageRemove(ctx context.Context, imageID string, options image.RemoveOptions) ([]image.DeleteResponse, error)
 	ImageTag(ctx context.Context, source, target string) error
 
 	NetworkCreate(ctx context.Context, name string, options types.NetworkCreate) (types.NetworkCreateResponse, error)

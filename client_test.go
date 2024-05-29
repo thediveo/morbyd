@@ -144,19 +144,19 @@ func newWrappedClient(ctrl *mock.Controller, wrapped moby.Client, withouts []str
 	}
 	if !slices.Contains(withouts, "ImageList") {
 		rec.ImageList(Any, Any).AnyTimes().
-			DoAndReturn(func(ctx context.Context, options types.ImageListOptions) ([]image.Summary, error) {
+			DoAndReturn(func(ctx context.Context, options image.ListOptions) ([]image.Summary, error) {
 				return wrapped.ImageList(ctx, options)
 			})
 	}
 	if !slices.Contains(withouts, "ImagePull") {
 		rec.ImagePull(Any, Any, Any).AnyTimes().
-			DoAndReturn(func(ctx context.Context, refStr string, options types.ImagePullOptions) (io.ReadCloser, error) {
+			DoAndReturn(func(ctx context.Context, refStr string, options image.PullOptions) (io.ReadCloser, error) {
 				return wrapped.ImagePull(ctx, refStr, options)
 			})
 	}
 	if !slices.Contains(withouts, "ImageRemove") {
 		rec.ImageRemove(Any, Any, Any).AnyTimes().
-			DoAndReturn(func(ctx context.Context, imageID string, options types.ImageRemoveOptions) ([]image.DeleteResponse, error) {
+			DoAndReturn(func(ctx context.Context, imageID string, options image.RemoveOptions) ([]image.DeleteResponse, error) {
 				return wrapped.ImageRemove(ctx, imageID, options)
 			})
 	}

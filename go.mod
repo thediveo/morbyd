@@ -3,18 +3,18 @@ module github.com/thediveo/morbyd
 go 1.21
 
 require (
-	github.com/docker/docker v26.1.1+incompatible
+	github.com/docker/docker v26.1.3+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/docker/go-units v0.5.0
 	github.com/moby/buildkit v0.13.2
-	github.com/onsi/ginkgo/v2 v2.17.3
+	github.com/onsi/ginkgo/v2 v2.19.0
 	github.com/onsi/gomega v1.33.1
 	github.com/opencontainers/image-spec v1.1.0
 	github.com/pkg/errors v0.9.1
 	github.com/thediveo/fdooze v0.3.1
 	github.com/thediveo/success v1.0.2
 	go.uber.org/mock v0.4.0
-	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842
+	golang.org/x/exp v0.0.0-20240529005216-23cca8864a10
 )
 
 require (
