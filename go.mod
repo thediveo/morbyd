@@ -14,7 +14,7 @@ require (
 	github.com/thediveo/fdooze v0.3.1
 	github.com/thediveo/success v1.0.2
 	go.uber.org/mock v0.4.0
-	golang.org/x/exp v0.0.0-20240529005216-23cca8864a10
+	golang.org/x/exp v0.0.0-20240531132922-fd00a4e0eefc
 )
 
 require (
