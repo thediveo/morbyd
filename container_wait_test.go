@@ -48,7 +48,8 @@ var _ = Describe("waiting for a container to terminate", Ordered, func() {
 		By("waiting for crashed container")
 		ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 		defer cancel()
-		Expect(cntr.Wait(ctx)).To(Succeed())
+		Expect(cntr.Wait(ctx)).To(MatchError(
+			MatchRegexp(`waiting for container ".+"/[[:xdigit:]]+ to finish failed, .+ No such container`)))
 	})
 
 })
