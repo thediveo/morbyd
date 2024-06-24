@@ -70,6 +70,7 @@ var _ = Describe("creating custom networks", Ordered, func() {
 				// https://en.wikipedia.org/wiki/Reserved_IP_addresses
 				"0.0.1.0/24", // a.k.a. "local" or "this"
 				ipam.WithRange("0.0.1.16/28")))))
+		DeferCleanup(func(ctx context.Context) { _ = nw.Remove(ctx) })
 
 		var buff safe.Buffer
 		Expect(sess.Run(ctx, "busybox", run.WithCommand(
