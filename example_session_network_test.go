@@ -71,15 +71,16 @@ func ExampleSession_CreateNetwork() {
 	defer cancel()
 
 	sess, err := morbyd.NewSession(ctx,
-		session.WithAutoCleaning("test.morbyd="))
+		session.WithAutoCleaning("test.morbyd=example.session.network"))
 	if err != nil {
 		panic(err)
 	}
 	defer sess.Close(ctx)
 
+	_ = sess.Client().NetworkRemove(ctx, "my-notwork")
 	netw, err := sess.CreateNetwork(ctx, "my-notwork",
 		net.WithInternal(),
-		net.WithIPAM(ipam.WithPool("0.0.1.0/24")))
+		net.WithIPAM(ipam.WithPool("0.0.42.0/24")))
 	if err != nil {
 		panic(err)
 	}
@@ -100,5 +101,5 @@ func ExampleSession_CreateNetwork() {
 
 	_ = container.Wait(ctx)
 	fmt.Print(out.String())
-	// Output: 0.0.1.2/24
+	// Output: 0.0.42.2/24
 }

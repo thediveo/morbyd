@@ -41,7 +41,7 @@ var _ = Describe("run container", Ordered, func() {
 
 	BeforeAll(func(ctx context.Context) {
 		sess = Successful(NewSession(ctx,
-			session.WithAutoCleaning("test.morbyd=")))
+			session.WithAutoCleaning("test.morbyd=container.run")))
 		DeferCleanup(func(ctx context.Context) {
 			sess.Close(ctx)
 		})

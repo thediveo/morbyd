@@ -118,9 +118,9 @@ func (c *Container) PID(ctx context.Context) (int, error) {
 		if inspRes.State != nil && inspRes.State.Pid != 0 {
 			return inspRes.State.Pid, nil
 		}
-		// We're either too early or too late, but we have to figure out,
-		// because we don't want to hang around any further if there is no
-		// chance of getting a PID in the near future...
+		// We're either too early or too late, but we have to figure out which
+		// one we're, because we don't want to hang around any further if there
+		// is no chance of getting a PID in the near future...
 		if inspRes.State != nil &&
 			((inspRes.State.Dead || inspRes.State.OOMKilled) &&
 				!inspRes.State.Restarting) {
@@ -146,8 +146,8 @@ func (c *Container) Stop(ctx context.Context) {
 // [Docker's Client.ContainerWait]: https://pkg.go.dev/github.com/docker/docker/client#Client.ContainerWait
 func (c *Container) Wait(ctx context.Context) error {
 	// Nota bene: errch is buffered with size 1. The wait result channel is
-	// unbuffered though. ContainerWait EITHER sends an error OR on a result,
-	// never both. And it never sends a nil error, in particular.
+	// unbuffered though. ContainerWait EITHER sends an error OR a result, never
+	// both. And in consequence it never sends a nil error.
 	waitch, errch := c.Session.moby.ContainerWait(ctx, c.ID, container.WaitConditionNotRunning)
 	select {
 	case err := <-errch:
@@ -187,7 +187,7 @@ func (c *Container) AbbreviatedID() string {
 // address string including port number can be determined as follows:
 //
 //	// for instance, returns "127.0.0.1:32890"
-//	svcAddrPort := cntr.PublishedPort("1234").Any().UnspecifiedAsLoopback().String
+//	svcAddrPort := cntr.PublishedPort("1234").Any().UnspecifiedAsLoopback().String()
 func (c *Container) PublishedPort(portproto string) Addrs {
 	if !strings.Contains(portproto, "/") {
 		portproto += "/tcp"

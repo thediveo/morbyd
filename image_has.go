@@ -18,14 +18,14 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/image"
 )
 
 // HasImage returns true if the image referenced by imageref is locally
 // available, otherwise false.
 func (s *Session) HasImage(ctx context.Context, imageref string) (bool, error) {
-	matchingimgs, err := s.moby.ImageList(ctx, types.ImageListOptions{
+	matchingimgs, err := s.moby.ImageList(ctx, image.ListOptions{
 		Filters: filters.NewArgs(filters.KeyValuePair{Key: "reference", Value: imageref}),
 	})
 	if err != nil {

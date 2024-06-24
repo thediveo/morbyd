@@ -192,6 +192,20 @@ func (mr *MockClientMockRecorder) ContainerList(arg0, arg1 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ContainerList", reflect.TypeOf((*MockClient)(nil).ContainerList), arg0, arg1)
 }
 
+// ContainerPause mocks base method.
+func (m *MockClient) ContainerPause(arg0 context.Context, arg1 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ContainerPause", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ContainerPause indicates an expected call of ContainerPause.
+func (mr *MockClientMockRecorder) ContainerPause(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ContainerPause", reflect.TypeOf((*MockClient)(nil).ContainerPause), arg0, arg1)
+}
+
 // ContainerRemove mocks base method.
 func (m *MockClient) ContainerRemove(arg0 context.Context, arg1 string, arg2 container.RemoveOptions) error {
 	m.ctrl.T.Helper()
@@ -204,6 +218,20 @@ func (m *MockClient) ContainerRemove(arg0 context.Context, arg1 string, arg2 con
 func (mr *MockClientMockRecorder) ContainerRemove(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ContainerRemove", reflect.TypeOf((*MockClient)(nil).ContainerRemove), arg0, arg1, arg2)
+}
+
+// ContainerRestart mocks base method.
+func (m *MockClient) ContainerRestart(arg0 context.Context, arg1 string, arg2 container.StopOptions) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ContainerRestart", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ContainerRestart indicates an expected call of ContainerRestart.
+func (mr *MockClientMockRecorder) ContainerRestart(arg0, arg1, arg2 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ContainerRestart", reflect.TypeOf((*MockClient)(nil).ContainerRestart), arg0, arg1, arg2)
 }
 
 // ContainerStart mocks base method.
@@ -232,6 +260,20 @@ func (m *MockClient) ContainerStop(arg0 context.Context, arg1 string, arg2 conta
 func (mr *MockClientMockRecorder) ContainerStop(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ContainerStop", reflect.TypeOf((*MockClient)(nil).ContainerStop), arg0, arg1, arg2)
+}
+
+// ContainerUnpause mocks base method.
+func (m *MockClient) ContainerUnpause(arg0 context.Context, arg1 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ContainerUnpause", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ContainerUnpause indicates an expected call of ContainerUnpause.
+func (mr *MockClientMockRecorder) ContainerUnpause(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ContainerUnpause", reflect.TypeOf((*MockClient)(nil).ContainerUnpause), arg0, arg1)
 }
 
 // ContainerWait mocks base method.
@@ -265,7 +307,7 @@ func (mr *MockClientMockRecorder) ImageBuild(arg0, arg1, arg2 any) *gomock.Call 
 }
 
 // ImageList mocks base method.
-func (m *MockClient) ImageList(arg0 context.Context, arg1 types.ImageListOptions) ([]image.Summary, error) {
+func (m *MockClient) ImageList(arg0 context.Context, arg1 image.ListOptions) ([]image.Summary, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ImageList", arg0, arg1)
 	ret0, _ := ret[0].([]image.Summary)
@@ -280,7 +322,7 @@ func (mr *MockClientMockRecorder) ImageList(arg0, arg1 any) *gomock.Call {
 }
 
 // ImagePull mocks base method.
-func (m *MockClient) ImagePull(arg0 context.Context, arg1 string, arg2 types.ImagePullOptions) (io.ReadCloser, error) {
+func (m *MockClient) ImagePull(arg0 context.Context, arg1 string, arg2 image.PullOptions) (io.ReadCloser, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ImagePull", arg0, arg1, arg2)
 	ret0, _ := ret[0].(io.ReadCloser)
@@ -295,7 +337,7 @@ func (mr *MockClientMockRecorder) ImagePull(arg0, arg1, arg2 any) *gomock.Call {
 }
 
 // ImageRemove mocks base method.
-func (m *MockClient) ImageRemove(arg0 context.Context, arg1 string, arg2 types.ImageRemoveOptions) ([]image.DeleteResponse, error) {
+func (m *MockClient) ImageRemove(arg0 context.Context, arg1 string, arg2 image.RemoveOptions) ([]image.DeleteResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ImageRemove", arg0, arg1, arg2)
 	ret0, _ := ret[0].([]image.DeleteResponse)

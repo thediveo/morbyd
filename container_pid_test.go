@@ -20,6 +20,8 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/thediveo/morbyd/run"
+	"github.com/thediveo/morbyd/session"
 	mock "go.uber.org/mock/gomock"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -36,116 +38,143 @@ var _ = Describe("getting container PIDs", Ordered, func() {
 			ShouldNot(HaveLeaked(goodgos))
 	})
 
-	It("retries until PID becomes available", func(ctx context.Context) {
-		ctrl := mock.NewController(GinkgoT())
-		sess := Successful(NewSession(ctx,
-			WithMockController(ctrl, "ContainerInspect")))
-		DeferCleanup(func(ctx context.Context) {
-			sess.Close(ctx)
-		})
-		rec := sess.Client().(*MockClient).EXPECT()
+	Context("mocked", func() {
 
-		rec.ContainerInspect(Any, Any).Return(types.ContainerJSON{
-			ContainerJSONBase: &types.ContainerJSONBase{},
-		}, nil)
-		rec.ContainerInspect(Any, Any).Return(types.ContainerJSON{
-			ContainerJSONBase: &types.ContainerJSONBase{
-				State: &types.ContainerState{
-					Pid: 42,
+		It("retries until PID becomes available", func(ctx context.Context) {
+			ctrl := mock.NewController(GinkgoT())
+			sess := Successful(NewSession(ctx,
+				WithMockController(ctrl, "ContainerInspect")))
+			DeferCleanup(func(ctx context.Context) {
+				sess.Close(ctx)
+			})
+			rec := sess.Client().(*MockClient).EXPECT()
+
+			rec.ContainerInspect(Any, Any).Return(types.ContainerJSON{
+				ContainerJSONBase: &types.ContainerJSONBase{},
+			}, nil)
+			rec.ContainerInspect(Any, Any).Return(types.ContainerJSON{
+				ContainerJSONBase: &types.ContainerJSONBase{
+					State: &types.ContainerState{
+						Pid: 42,
+					},
 				},
-			},
-		}, nil)
+			}, nil)
 
-		cntr := &Container{Session: sess, ID: "bad1dea"}
-		Expect(cntr.PID(ctx)).To(Equal(42))
+			cntr := &Container{Session: sess, ID: "bad1dea"}
+			Expect(cntr.PID(ctx)).To(Equal(42))
+		})
+
+		It("waits for a restart", func(ctx context.Context) {
+			ctrl := mock.NewController(GinkgoT())
+			sess := Successful(NewSession(ctx,
+				WithMockController(ctrl, "ContainerInspect")))
+			DeferCleanup(func(ctx context.Context) {
+				sess.Close(ctx)
+			})
+			rec := sess.Client().(*MockClient).EXPECT()
+
+			rec.ContainerInspect(Any, Any).Return(types.ContainerJSON{
+				ContainerJSONBase: &types.ContainerJSONBase{
+					State: &types.ContainerState{
+						Dead:       true,
+						Restarting: true,
+					},
+				},
+			}, nil)
+			rec.ContainerInspect(Any, Any).Return(types.ContainerJSON{
+				ContainerJSONBase: &types.ContainerJSONBase{
+					State: &types.ContainerState{
+						Pid: 42,
+					},
+				},
+			}, nil)
+
+			cntr := &Container{Session: sess, ID: "bad1dea"}
+			Expect(cntr.PID(ctx)).To(Equal(42))
+		})
+
+		It("gives up when there's no chance of a restart", func(ctx context.Context) {
+			ctrl := mock.NewController(GinkgoT())
+			sess := Successful(NewSession(ctx,
+				WithMockController(ctrl, "ContainerInspect")))
+			DeferCleanup(func(ctx context.Context) {
+				sess.Close(ctx)
+			})
+			rec := sess.Client().(*MockClient).EXPECT()
+
+			rec.ContainerInspect(Any, Any).Return(types.ContainerJSON{
+				ContainerJSONBase: &types.ContainerJSONBase{},
+			}, nil)
+			rec.ContainerInspect(Any, Any).Return(types.ContainerJSON{
+				ContainerJSONBase: &types.ContainerJSONBase{
+					State: &types.ContainerState{
+						OOMKilled: true,
+					},
+				},
+			}, nil)
+
+			cntr := &Container{Session: sess, ID: "bad1dea"}
+			Expect(cntr.PID(ctx)).Error().To(HaveOccurred())
+		})
+
+		It("reports an error when container cannot be inspected", func(ctx context.Context) {
+			ctrl := mock.NewController(GinkgoT())
+			sess := Successful(NewSession(ctx,
+				WithMockController(ctrl, "ContainerInspect")))
+			DeferCleanup(func(ctx context.Context) {
+				sess.Close(ctx)
+			})
+			rec := sess.Client().(*MockClient).EXPECT()
+
+			rec.ContainerInspect(Any, Any).Return(types.ContainerJSON{}, errors.New("error IJK305I"))
+
+			cntr := &Container{Session: sess, ID: "bad1dea"}
+			Expect(cntr.PID(ctx)).Error().To(HaveOccurred())
+		})
+
+		It("returns when its nap gets cancelled", func(ctx context.Context) {
+			ctrl := mock.NewController(GinkgoT())
+			sess := Successful(NewSession(ctx,
+				WithMockController(ctrl, "ContainerInspect")))
+			DeferCleanup(func(ctx context.Context) {
+				sess.Close(ctx)
+			})
+			rec := sess.Client().(*MockClient).EXPECT()
+
+			// Ignore the cancelled context so we can get to the short nap attack.
+			rec.ContainerInspect(Any, Any).Return(types.ContainerJSON{
+				ContainerJSONBase: &types.ContainerJSONBase{},
+			}, nil)
+			ctx, cancel := context.WithCancel(ctx)
+			cancel()
+
+			cntr := &Container{Session: sess, ID: "bad1dea"}
+			Expect(cntr.PID(ctx)).Error().To(HaveOccurred())
+		})
+
 	})
 
-	It("waits for a restart", func(ctx context.Context) {
-		ctrl := mock.NewController(GinkgoT())
-		sess := Successful(NewSession(ctx,
-			WithMockController(ctrl, "ContainerInspect")))
-		DeferCleanup(func(ctx context.Context) {
-			sess.Close(ctx)
+	Context("handling a failed container", func() {
+
+		It("doesn't wait endless for PID of failed container", func(ctx context.Context) {
+			sess := Successful(NewSession(ctx, session.WithAutoCleaning("test.morbid=container.pid")))
+			DeferCleanup(func(ctx context.Context) { sess.Close(ctx) })
+
+			By("creating a crashed container")
+			cntr := Successful(sess.Run(ctx,
+				"busybox",
+				run.WithCommand("/bin/sh", "-c", "this feels wrong"),
+				run.WithAutoRemove(),
+				run.WithCombinedOutput(GinkgoWriter)))
+			By("(not) getting PID of crashed container")
+			Eventually(func(ctx context.Context) error {
+				_, err := cntr.PID(ctx)
+				return err
+			}).WithContext(ctx).
+				Within(2 * time.Second).ProbeEvery(100 * time.Millisecond).
+				ShouldNot(Succeed())
 		})
-		rec := sess.Client().(*MockClient).EXPECT()
 
-		rec.ContainerInspect(Any, Any).Return(types.ContainerJSON{
-			ContainerJSONBase: &types.ContainerJSONBase{
-				State: &types.ContainerState{
-					Dead:       true,
-					Restarting: true,
-				},
-			},
-		}, nil)
-		rec.ContainerInspect(Any, Any).Return(types.ContainerJSON{
-			ContainerJSONBase: &types.ContainerJSONBase{
-				State: &types.ContainerState{
-					Pid: 42,
-				},
-			},
-		}, nil)
-
-		cntr := &Container{Session: sess, ID: "bad1dea"}
-		Expect(cntr.PID(ctx)).To(Equal(42))
-	})
-
-	It("gives up when there's no chance of a restart", func(ctx context.Context) {
-		ctrl := mock.NewController(GinkgoT())
-		sess := Successful(NewSession(ctx,
-			WithMockController(ctrl, "ContainerInspect")))
-		DeferCleanup(func(ctx context.Context) {
-			sess.Close(ctx)
-		})
-		rec := sess.Client().(*MockClient).EXPECT()
-
-		rec.ContainerInspect(Any, Any).Return(types.ContainerJSON{
-			ContainerJSONBase: &types.ContainerJSONBase{},
-		}, nil)
-		rec.ContainerInspect(Any, Any).Return(types.ContainerJSON{
-			ContainerJSONBase: &types.ContainerJSONBase{
-				State: &types.ContainerState{
-					OOMKilled: true,
-				},
-			},
-		}, nil)
-
-		cntr := &Container{Session: sess, ID: "bad1dea"}
-		Expect(cntr.PID(ctx)).Error().To(HaveOccurred())
-	})
-
-	It("reports an error when container cannot be inspected", func(ctx context.Context) {
-		ctrl := mock.NewController(GinkgoT())
-		sess := Successful(NewSession(ctx,
-			WithMockController(ctrl, "ContainerInspect")))
-		DeferCleanup(func(ctx context.Context) {
-			sess.Close(ctx)
-		})
-		rec := sess.Client().(*MockClient).EXPECT()
-
-		rec.ContainerInspect(Any, Any).Return(types.ContainerJSON{}, errors.New("error IJK305I"))
-
-		cntr := &Container{Session: sess, ID: "bad1dea"}
-		Expect(cntr.PID(ctx)).Error().To(HaveOccurred())
-	})
-
-	It("returns when its nap gets cancelled", func(ctx context.Context) {
-		ctrl := mock.NewController(GinkgoT())
-		sess := Successful(NewSession(ctx,
-			WithMockController(ctrl, "ContainerInspect")))
-		DeferCleanup(func(ctx context.Context) {
-			sess.Close(ctx)
-		})
-		rec := sess.Client().(*MockClient).EXPECT()
-
-		// Ignore the cancelled context so we can get to the short nap attack.
-		rec.ContainerInspect(Any, Any).Return(types.ContainerJSON{
-			ContainerJSONBase: &types.ContainerJSONBase{},
-		}, nil)
-		ctx, cancel := context.WithCancel(ctx)
-		cancel()
-
-		cntr := &Container{Session: sess, ID: "bad1dea"}
-		Expect(cntr.PID(ctx)).Error().To(HaveOccurred())
 	})
 
 })

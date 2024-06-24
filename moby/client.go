@@ -41,9 +41,12 @@ type Client interface {
 	ContainerInspect(ctx context.Context, containerID string) (types.ContainerJSON, error)
 	ContainerKill(ctx context.Context, containerID, signal string) error
 	ContainerList(ctx context.Context, options container.ListOptions) ([]types.Container, error)
+	ContainerPause(ctx context.Context, containerID string) error
 	ContainerRemove(ctx context.Context, containerID string, options container.RemoveOptions) error
+	ContainerRestart(ctx context.Context, containerID string, options container.StopOptions) error
 	ContainerStart(ctx context.Context, containerID string, options container.StartOptions) error
 	ContainerStop(ctx context.Context, containerID string, options container.StopOptions) error
+	ContainerUnpause(ctx context.Context, containerID string) error
 	ContainerWait(ctx context.Context, containerID string, condition container.WaitCondition) (<-chan container.WaitResponse, <-chan error)
 
 	ContainerExecAttach(ctx context.Context, execID string, config types.ExecStartCheck) (types.HijackedResponse, error)
@@ -52,9 +55,9 @@ type Client interface {
 	ContainerExecInspect(ctx context.Context, execID string) (types.ContainerExecInspect, error)
 
 	ImageBuild(ctx context.Context, buildContext io.Reader, options types.ImageBuildOptions) (types.ImageBuildResponse, error)
-	ImageList(ctx context.Context, options types.ImageListOptions) ([]image.Summary, error)
-	ImagePull(ctx context.Context, refStr string, options types.ImagePullOptions) (io.ReadCloser, error)
-	ImageRemove(ctx context.Context, imageID string, options types.ImageRemoveOptions) ([]image.DeleteResponse, error)
+	ImageList(ctx context.Context, options image.ListOptions) ([]image.Summary, error)
+	ImagePull(ctx context.Context, refStr string, options image.PullOptions) (io.ReadCloser, error)
+	ImageRemove(ctx context.Context, imageID string, options image.RemoveOptions) ([]image.DeleteResponse, error)
 	ImageTag(ctx context.Context, source, target string) error
 
 	NetworkCreate(ctx context.Context, name string, options types.NetworkCreate) (types.NetworkCreateResponse, error)
