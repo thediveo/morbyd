@@ -86,10 +86,22 @@ func newWrappedClient(ctrl *mock.Controller, wrapped moby.Client, withouts []str
 				return wrapped.ContainerList(ctx, options)
 			})
 	}
+	if !slices.Contains(withouts, "ContainerPause") {
+		rec.ContainerPause(Any, Any).AnyTimes().
+			DoAndReturn(func(ctx context.Context, containerID string) error {
+				return wrapped.ContainerPause(ctx, containerID)
+			})
+	}
 	if !slices.Contains(withouts, "ContainerRemove") {
 		rec.ContainerRemove(Any, Any, Any).AnyTimes().
 			DoAndReturn(func(ctx context.Context, containerID string, options container.RemoveOptions) error {
 				return wrapped.ContainerRemove(ctx, containerID, options)
+			})
+	}
+	if !slices.Contains(withouts, "ContainerRestart") {
+		rec.ContainerRestart(Any, Any, Any).AnyTimes().
+			DoAndReturn(func(ctx context.Context, containerID string, options container.StopOptions) error {
+				return wrapped.ContainerRestart(ctx, containerID, options)
 			})
 	}
 	if !slices.Contains(withouts, "ContainerStart") {
@@ -102,6 +114,12 @@ func newWrappedClient(ctrl *mock.Controller, wrapped moby.Client, withouts []str
 		rec.ContainerStop(Any, Any, Any).AnyTimes().
 			DoAndReturn(func(ctx context.Context, containerID string, options container.StopOptions) error {
 				return wrapped.ContainerStop(ctx, containerID, options)
+			})
+	}
+	if !slices.Contains(withouts, "ContainerUnpause") {
+		rec.ContainerUnpause(Any, Any).AnyTimes().
+			DoAndReturn(func(ctx context.Context, containerID string) error {
+				return wrapped.ContainerUnpause(ctx, containerID)
 			})
 	}
 	if !slices.Contains(withouts, "ContainerWait") {
