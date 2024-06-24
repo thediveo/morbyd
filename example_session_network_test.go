@@ -77,6 +77,7 @@ func ExampleSession_CreateNetwork() {
 	}
 	defer sess.Close(ctx)
 
+	_ = sess.Client().NetworkRemove(ctx, "my-notwork")
 	netw, err := sess.CreateNetwork(ctx, "my-notwork",
 		net.WithInternal(),
 		net.WithIPAM(ipam.WithPool("0.0.1.0/24")))
