@@ -40,7 +40,7 @@ var _ = Describe("containers", Ordered, func() {
 
 	BeforeAll(func(ctx context.Context) {
 		sess = Successful(NewSession(ctx,
-			session.WithAutoCleaning("test.morbyd=")))
+			session.WithAutoCleaning("test.morbyd=container")))
 		DeferCleanup(func(ctx context.Context) {
 			sess.Close(ctx)
 		})

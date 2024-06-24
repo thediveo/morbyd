@@ -50,7 +50,7 @@ func ExampleSession_Run() {
 	defer cancel()
 
 	sess, err := morbyd.NewSession(ctx,
-		session.WithAutoCleaning("test.morbyd="))
+		session.WithAutoCleaning("test.morbyd=example.session.run"))
 	if err != nil {
 		panic(err)
 	}

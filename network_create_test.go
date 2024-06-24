@@ -46,7 +46,7 @@ var _ = Describe("creating custom networks", Ordered, func() {
 
 	It("rejects invalid options", func(ctx context.Context) {
 		sess := Successful(NewSession(ctx,
-			session.WithAutoCleaning("test.morbyd=")))
+			session.WithAutoCleaning("test.morbyd=network.create.invopt")))
 		DeferCleanup(func(ctx context.Context) {
 			sess.Close(ctx)
 		})
@@ -58,7 +58,7 @@ var _ = Describe("creating custom networks", Ordered, func() {
 		const name = "morbyd-custom-bridge-network"
 
 		sess := Successful(NewSession(ctx,
-			session.WithAutoCleaning("test.morbyd=")))
+			session.WithAutoCleaning("test.morbyd=network.create.customnet")))
 		DeferCleanup(func(ctx context.Context) {
 			sess.Close(ctx)
 		})

@@ -30,44 +30,48 @@ import (
 
 var _ = Describe("image presence", Ordered, func() {
 
-	BeforeEach(func(ctx context.Context) {
-		goodgos := Goroutines()
-		DeferCleanup(func() {
-			Eventually(Goroutines).Within(2 * time.Second).ProbeEvery(250 * time.Millisecond).
-				ShouldNot(HaveLeaked(goodgos))
+	Context("image presence checking", Ordered, func() {
+
+		BeforeEach(func(ctx context.Context) {
+			goodgos := Goroutines()
+			DeferCleanup(func() {
+				Eventually(Goroutines).Within(2 * time.Second).ProbeEvery(250 * time.Millisecond).
+					ShouldNot(HaveLeaked(goodgos))
+			})
 		})
-	})
 
-	It("reports whether an image is locally available", func(ctx context.Context) {
-		const imgref = "busybox:latestandgreatest"
+		It("reports whether an image is locally available", func(ctx context.Context) {
+			const imgref = "busybox:latestandgreatest"
 
-		ctrl := mock.NewController(GinkgoT())
-		sess := Successful(NewSession(ctx,
-			WithMockController(ctrl, "ImageList")))
-		DeferCleanup(func(ctx context.Context) {
-			sess.Close(ctx)
+			ctrl := mock.NewController(GinkgoT())
+			sess := Successful(NewSession(ctx,
+				WithMockController(ctrl, "ImageList")))
+			DeferCleanup(func(ctx context.Context) {
+				sess.Close(ctx)
+			})
+			rec := sess.Client().(*MockClient).EXPECT()
+			rec.ImageList(Any, Any).Return([]image.Summary{}, nil)
+			rec.ImageList(Any, Any).Return([]image.Summary{
+				{ /*doesn't matter what, just needs to exist*/ },
+			}, nil)
+
+			Expect(sess.HasImage(ctx, imgref)).To(BeFalse())
+			Expect(sess.HasImage(ctx, imgref)).To(BeTrue())
 		})
-		rec := sess.Client().(*MockClient).EXPECT()
-		rec.ImageList(Any, Any).Return([]image.Summary{}, nil)
-		rec.ImageList(Any, Any).Return([]image.Summary{
-			{ /*doesn't matter what, just needs to exist*/ },
-		}, nil)
 
-		Expect(sess.HasImage(ctx, imgref)).To(BeFalse())
-		Expect(sess.HasImage(ctx, imgref)).To(BeTrue())
-	})
+		It("reports image listing errors", func(ctx context.Context) {
+			ctrl := mock.NewController(GinkgoT())
+			sess := Successful(NewSession(ctx,
+				WithMockController(ctrl, "ImageList")))
+			DeferCleanup(func(ctx context.Context) {
+				sess.Close(ctx)
+			})
+			rec := sess.Client().(*MockClient).EXPECT()
+			rec.ImageList(Any, Any).Return(nil, errors.New("error IJK305I"))
 
-	It("reports image listing errors", func(ctx context.Context) {
-		ctrl := mock.NewController(GinkgoT())
-		sess := Successful(NewSession(ctx,
-			WithMockController(ctrl, "ImageList")))
-		DeferCleanup(func(ctx context.Context) {
-			sess.Close(ctx)
+			Expect(sess.HasImage(ctx, "busybox:absolutelygreatest")).Error().To(HaveOccurred())
 		})
-		rec := sess.Client().(*MockClient).EXPECT()
-		rec.ImageList(Any, Any).Return(nil, errors.New("error IJK305I"))
 
-		Expect(sess.HasImage(ctx, "busybox:absolutelygreatest")).Error().To(HaveOccurred())
 	})
 
 })

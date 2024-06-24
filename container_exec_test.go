@@ -48,7 +48,7 @@ var _ = Describe("execute command inside container", Ordered, func() {
 
 		BeforeEach(func(ctx context.Context) {
 			sess = Successful(NewSession(ctx,
-				session.WithAutoCleaning("test.morbyd=")))
+				session.WithAutoCleaning("test.morbyd=container.exec")))
 			DeferCleanup(func(ctx context.Context) {
 				sess.Close(ctx)
 			})

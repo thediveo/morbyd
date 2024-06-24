@@ -39,7 +39,7 @@ var _ = Describe("getting container IPs", Ordered, func() {
 
 	It("returns a container's IP that we can talk to", func(ctx context.Context) {
 		sess := Successful(NewSession(ctx,
-			session.WithAutoCleaning("test.morbyd=")))
+			session.WithAutoCleaning("test.morbyd=container.ip")))
 		DeferCleanup(func(ctx context.Context) {
 			sess.Close(ctx)
 		})

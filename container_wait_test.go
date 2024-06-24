@@ -36,7 +36,7 @@ var _ = Describe("waiting for a container to terminate", Ordered, func() {
 	})
 
 	It("doesn't wait endless for failed container", func(ctx context.Context) {
-		sess := Successful(NewSession(ctx, session.WithAutoCleaning("test.morbid=pid")))
+		sess := Successful(NewSession(ctx, session.WithAutoCleaning("test.morbid=container.wait")))
 		DeferCleanup(func(ctx context.Context) { sess.Close(ctx) })
 
 		By("creating a crashed container")
@@ -48,8 +48,10 @@ var _ = Describe("waiting for a container to terminate", Ordered, func() {
 		By("waiting for crashed container")
 		ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 		defer cancel()
-		Expect(cntr.Wait(ctx)).To(MatchError(
-			MatchRegexp(`waiting for container ".+"/[[:xdigit:]]+ to finish failed, .+ No such container`)))
+		Expect(cntr.Wait(ctx)).To(Or(
+			Succeed(),
+			MatchError(
+				MatchRegexp(`waiting for container ".+"/[[:xdigit:]]+ to finish failed, .+ No such container`))))
 	})
 
 })

@@ -32,7 +32,7 @@ var _ = Describe("published container ports", Ordered, func() {
 
 	It("publishes container ports and talks to them", func(ctx context.Context) {
 		sess := Successful(NewSession(ctx,
-			session.WithAutoCleaning("test.morbyd=")))
+			session.WithAutoCleaning("test.morbyd=container.port")))
 		DeferCleanup(func(ctx context.Context) { sess.Close(ctx) })
 
 		By("spinning up an http serving busybox with published ports")

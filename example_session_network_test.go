@@ -71,7 +71,7 @@ func ExampleSession_CreateNetwork() {
 	defer cancel()
 
 	sess, err := morbyd.NewSession(ctx,
-		session.WithAutoCleaning("test.morbyd="))
+		session.WithAutoCleaning("test.morbyd=example.session.network"))
 	if err != nil {
 		panic(err)
 	}

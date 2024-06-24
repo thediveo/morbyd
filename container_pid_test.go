@@ -157,7 +157,7 @@ var _ = Describe("getting container PIDs", Ordered, func() {
 	Context("handling a failed container", func() {
 
 		It("doesn't wait endless for PID of failed container", func(ctx context.Context) {
-			sess := Successful(NewSession(ctx, session.WithAutoCleaning("test.morbid=pid")))
+			sess := Successful(NewSession(ctx, session.WithAutoCleaning("test.morbid=container.pid")))
 			DeferCleanup(func(ctx context.Context) { sess.Close(ctx) })
 
 			By("creating a crashed container")

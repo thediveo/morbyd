@@ -51,7 +51,7 @@ func ExampleContainer_Exec() {
 	defer cancel()
 
 	sess, err := morbyd.NewSession(ctx,
-		session.WithAutoCleaning("test.morbyd="))
+		session.WithAutoCleaning("test.morbyd=example.container.exec"))
 	if err != nil {
 		panic(err)
 	}

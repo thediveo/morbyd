@@ -73,7 +73,7 @@ var _ = Describe("build image", Ordered, func() {
 
 		BeforeAll(func(ctx context.Context) {
 			sess = Successful(NewSession(ctx,
-				session.WithAutoCleaning("test.morbyd=")))
+				session.WithAutoCleaning("test.morbyd=image.build")))
 			DeferCleanup(func(ctx context.Context) {
 				// not strictly necessary as we're doing it anyway after each
 				// individual test in order to check for leaked go routines.
