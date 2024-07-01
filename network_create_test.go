@@ -20,7 +20,7 @@ import (
 	"io"
 	"time"
 
-	types "github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/network"
 	"github.com/thediveo/morbyd/ipam"
 	"github.com/thediveo/morbyd/net"
 	"github.com/thediveo/morbyd/net/bridge"
@@ -94,7 +94,7 @@ var _ = Describe("creating custom networks", Ordered, func() {
 		})
 		rec := sess.Client().(*MockClient).EXPECT()
 
-		rec.NetworkCreate(Any, Any, Any).Return(types.NetworkCreateResponse{}, errors.New("error IJK305I"))
+		rec.NetworkCreate(Any, Any, Any).Return(network.CreateResponse{}, errors.New("error IJK305I"))
 
 		Expect(sess.CreateNetwork(ctx, "foobar-telekomisch")).Error().To(MatchError(ContainSubstring("cannot create new network")))
 
@@ -109,10 +109,10 @@ var _ = Describe("creating custom networks", Ordered, func() {
 		})
 		rec := sess.Client().(*MockClient).EXPECT()
 
-		rec.NetworkCreate(Any, Any, Any).Return(types.NetworkCreateResponse{
+		rec.NetworkCreate(Any, Any, Any).Return(network.CreateResponse{
 			ID: "deadbeef",
 		}, nil)
-		rec.NetworkInspect(Any, Any, Any).Return(types.NetworkResource{}, errors.New("error IJK305I"))
+		rec.NetworkInspect(Any, Any, Any).Return(network.Summary{}, errors.New("error IJK305I"))
 		rec.NetworkRemove(Any, mock.Eq("deadbeef")).Return(nil)
 
 		Expect(sess.CreateNetwork(ctx, "foobar-telekomisch")).Error().To(MatchError(ContainSubstring("cannot inspect newly created network")))

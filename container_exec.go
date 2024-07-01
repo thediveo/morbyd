@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/thediveo/morbyd/exec"
 )
@@ -55,7 +55,7 @@ type ExecSession struct {
 // be attached to the executing command's input/output streams.
 func (c *Container) Exec(ctx context.Context, cmd exec.Cmd, opts ...exec.Opt) (es *ExecSession, err error) {
 	exopts := exec.Options{
-		Conf: types.ExecConfig{
+		Conf: container.ExecOptions{
 			Cmd: cmd,
 		},
 	}
@@ -94,7 +94,7 @@ func (c *Container) Exec(ctx context.Context, cmd exec.Cmd, opts ...exec.Opt) (e
 	// now start executing the command and at the same time attach to its input
 	// and output. Nota bene: the Docker Go client is confusing here, as there's
 	// also a ContainerExecStart which also starts the exec but doesn't attach.
-	attachResp, err := c.Session.moby.ContainerExecAttach(ctx, execResp.ID, types.ExecStartCheck{
+	attachResp, err := c.Session.moby.ContainerExecAttach(ctx, execResp.ID, container.ExecAttachOptions{
 		Tty:         exopts.Conf.Tty,
 		ConsoleSize: exopts.Conf.ConsoleSize,
 	})

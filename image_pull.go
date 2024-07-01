@@ -19,14 +19,14 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/pkg/jsonmessage"
 )
 
 type PullImageOpt func(*pullImageOptions)
 
 type pullImageOptions struct {
-	types.ImagePullOptions
+	image.PullOptions
 	out io.Writer
 }
 
@@ -47,7 +47,7 @@ func (s *Session) PullImage(ctx context.Context, imgref string, opts ...PullImag
 	if pios.out == nil {
 		pios.out = io.Discard
 	}
-	r, err := s.moby.ImagePull(ctx, imgref, pios.ImagePullOptions)
+	r, err := s.moby.ImagePull(ctx, imgref, pios.PullOptions)
 	if err != nil {
 		return fmt.Errorf("image pull failed, reason: %w", err)
 	}

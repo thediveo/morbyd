@@ -23,6 +23,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/network"
 	"github.com/docker/go-connections/nat"
 )
 
@@ -74,7 +75,7 @@ func (c *Container) IP(ctx context.Context) net.IP {
 	// doesn't tell us what the driver is. However, we need to know in order to
 	// correctly skip MACVLANs...
 	for _, netw := range c.Details.NetworkSettings.Networks {
-		details, err := c.Session.moby.NetworkInspect(ctx, netw.NetworkID, types.NetworkInspectOptions{
+		details, err := c.Session.moby.NetworkInspect(ctx, netw.NetworkID, network.InspectOptions{
 			Verbose: true,
 		})
 		if err != nil {

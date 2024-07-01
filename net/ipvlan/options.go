@@ -15,7 +15,7 @@
 package ipvlan
 
 import (
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/network"
 	"github.com/thediveo/morbyd/internal/netint"
 	"github.com/thediveo/morbyd/net"
 )
@@ -45,7 +45,7 @@ const (
 // [IPvlan network driver options]: https://docs.docker.com/network/drivers/ipvlan/#options
 func WithParent(ifname string) net.Opt {
 	return func(o *net.Options) error {
-		netint.EnsureOptionsMap((*types.NetworkCreate)(o))
+		netint.EnsureOptionsMap((*network.CreateOptions)(o))
 		o.Options["parent"] = ifname
 		return nil
 	}
@@ -76,7 +76,7 @@ func WithParent(ifname string) net.Opt {
 // [Getting started with IPVLAN]: https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/system_design_guide/getting-started-with-ipvlan_system-design-guide
 func WithMode(mode IPVLANMode) net.Opt {
 	return func(o *net.Options) error {
-		netint.EnsureOptionsMap((*types.NetworkCreate)(o))
+		netint.EnsureOptionsMap((*network.CreateOptions)(o))
 		o.Options["ipvlan_mode"] = string(mode)
 		return nil
 	}
@@ -94,7 +94,7 @@ func WithMode(mode IPVLANMode) net.Opt {
 // [IPvlan network driver options]: https://docs.docker.com/network/drivers/ipvlan/#options
 func WithFlag(flag IPVLANFlag) net.Opt {
 	return func(o *net.Options) error {
-		netint.EnsureOptionsMap((*types.NetworkCreate)(o))
+		netint.EnsureOptionsMap((*network.CreateOptions)(o))
 		o.Options["ipvlan_flag"] = string(flag)
 		return nil
 	}

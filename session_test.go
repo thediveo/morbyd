@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/thediveo/morbyd/run"
 	"github.com/thediveo/morbyd/safe"
@@ -109,7 +110,7 @@ var _ = Describe("test sessions", func() {
 			rec := sess.Client().(*MockClient).EXPECT()
 
 			rec.NetworkList(Any, Any).
-				Return([]types.NetworkResource{
+				Return([]network.Summary{
 					{ID: "42"},
 					{ID: "666"},
 				}, nil)

@@ -49,7 +49,7 @@ var _ = Describe("network options", func() {
 				},
 			}})))
 		Expect(netos.Internal).To(BeTrue())
-		Expect(netos.EnableIPv6).To(BeTrue())
+		Expect(netos.EnableIPv6).To(gs.PointTo(Equal(true)))
 		Expect(netos.Options).To(HaveLen(1))
 		Expect(netos.Options).To(HaveKeyWithValue("say", "doh"))
 		Expect(netos.Labels).To(HaveLen(2))

@@ -17,14 +17,14 @@ package morbyd
 import (
 	"context"
 
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/network"
 )
 
 type Network struct {
 	Name    string
 	ID      string
 	Session *Session
-	Details types.NetworkResource
+	Details network.Summary
 }
 
 func (n *Network) Remove(ctx context.Context) error {

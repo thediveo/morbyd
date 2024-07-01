@@ -17,7 +17,7 @@ package exec
 import (
 	"io"
 
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 )
 
 // Opt is a configuration option to run a command inside a container using
@@ -34,7 +34,7 @@ type Options struct {
 	In   io.Reader
 	Out  io.Writer
 	Err  io.Writer
-	Conf types.ExecConfig
+	Conf container.ExecOptions
 }
 
 // WithCombinedOutput sends the commands's stdout and stderr to the specified

@@ -49,10 +49,10 @@ type Client interface {
 	ContainerUnpause(ctx context.Context, containerID string) error
 	ContainerWait(ctx context.Context, containerID string, condition container.WaitCondition) (<-chan container.WaitResponse, <-chan error)
 
-	ContainerExecAttach(ctx context.Context, execID string, config types.ExecStartCheck) (types.HijackedResponse, error)
-	ContainerExecCreate(ctx context.Context, container string, config types.ExecConfig) (types.IDResponse, error)
-	ContainerExecStart(ctx context.Context, execID string, config types.ExecStartCheck) error
-	ContainerExecInspect(ctx context.Context, execID string) (types.ContainerExecInspect, error)
+	ContainerExecAttach(ctx context.Context, execID string, config container.ExecAttachOptions) (types.HijackedResponse, error)
+	ContainerExecCreate(ctx context.Context, container string, config container.ExecOptions) (types.IDResponse, error)
+	ContainerExecStart(ctx context.Context, execID string, config container.ExecStartOptions) error
+	ContainerExecInspect(ctx context.Context, execID string) (container.ExecInspect, error)
 
 	ImageBuild(ctx context.Context, buildContext io.Reader, options types.ImageBuildOptions) (types.ImageBuildResponse, error)
 	ImageList(ctx context.Context, options image.ListOptions) ([]image.Summary, error)
@@ -60,9 +60,9 @@ type Client interface {
 	ImageRemove(ctx context.Context, imageID string, options image.RemoveOptions) ([]image.DeleteResponse, error)
 	ImageTag(ctx context.Context, source, target string) error
 
-	NetworkCreate(ctx context.Context, name string, options types.NetworkCreate) (types.NetworkCreateResponse, error)
-	NetworkInspect(ctx context.Context, networkID string, options types.NetworkInspectOptions) (types.NetworkResource, error)
-	NetworkList(ctx context.Context, options types.NetworkListOptions) ([]types.NetworkResource, error)
+	NetworkCreate(ctx context.Context, name string, options network.CreateOptions) (network.CreateResponse, error)
+	NetworkInspect(ctx context.Context, networkID string, options network.InspectOptions) (network.Summary, error)
+	NetworkList(ctx context.Context, options network.ListOptions) ([]network.Summary, error)
 	NetworkRemove(ctx context.Context, networkID string) error
 
 	ServerVersion(ctx context.Context) (types.Version, error)

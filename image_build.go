@@ -25,7 +25,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/docker/pkg/jsonmessage"
-	"github.com/moby/buildkit/frontend/dockerfile/dockerignore"
+	"github.com/moby/patternmatcher/ignorefile"
 	"github.com/thediveo/morbyd/build"
 )
 
@@ -109,7 +109,7 @@ func readIgnorePatterns(name string) []string {
 		return nil
 	}
 	defer f.Close()
-	patterns, err := dockerignore.ReadAll(f)
+	patterns, err := ignorefile.ReadAll(f)
 	if err != nil {
 		return nil
 	}

@@ -20,6 +20,7 @@ package morbyd
 import (
 	"context"
 	"io"
+	"slices"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -29,7 +30,6 @@ import (
 	"github.com/thediveo/morbyd/moby"
 	"github.com/thediveo/morbyd/session"
 	mock "go.uber.org/mock/gomock"
-	"golang.org/x/exp/slices"
 )
 
 // WithMockController wraps the Docker client in our mock, using the specified

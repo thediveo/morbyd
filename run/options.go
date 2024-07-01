@@ -22,6 +22,8 @@ import (
 	"strconv"
 	"strings"
 
+	"golang.org/x/exp/maps"
+
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
@@ -30,7 +32,6 @@ import (
 	lbls "github.com/thediveo/morbyd/labels"
 	"github.com/thediveo/morbyd/run/dockercli"
 	"github.com/thediveo/morbyd/strukt"
-	"golang.org/x/exp/maps"
 )
 
 // Opt is a configuration option to run a container using
