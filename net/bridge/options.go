@@ -17,7 +17,7 @@ package bridge
 import (
 	"strconv"
 
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/network"
 	"github.com/thediveo/morbyd/internal/netint"
 	"github.com/thediveo/morbyd/net"
 )
@@ -39,7 +39,7 @@ const (
 // [Bridge network driver options]: https://docs.docker.com/network/drivers/bridge/#options
 func WithBridgeName(ifname string) net.Opt {
 	return func(o *net.Options) error {
-		netint.EnsureOptionsMap((*types.NetworkCreate)(o))
+		netint.EnsureOptionsMap((*network.CreateOptions)(o))
 		o.Options[bridgeOptionStem+"name"] = ifname
 		return nil
 	}
@@ -52,7 +52,7 @@ func WithBridgeName(ifname string) net.Opt {
 // [Bridge network driver options]: https://docs.docker.com/network/drivers/bridge/#options
 func WithoutIPMasquerade() net.Opt {
 	return func(o *net.Options) error {
-		netint.EnsureOptionsMap((*types.NetworkCreate)(o))
+		netint.EnsureOptionsMap((*network.CreateOptions)(o))
 		o.Options[bridgeOptionStem+"enable_ip_masquerade"] = "false"
 		return nil
 	}
@@ -66,7 +66,7 @@ func WithoutIPMasquerade() net.Opt {
 // [Bridge network driver options]: https://docs.docker.com/network/drivers/bridge/#options
 func WithoutICC() net.Opt {
 	return func(o *net.Options) error {
-		netint.EnsureOptionsMap((*types.NetworkCreate)(o))
+		netint.EnsureOptionsMap((*network.CreateOptions)(o))
 		o.Options[bridgeOptionStem+"enable_icc"] = "false"
 		return nil
 	}
@@ -79,7 +79,7 @@ func WithoutICC() net.Opt {
 // [Bridge network driver options]: https://docs.docker.com/network/drivers/bridge/#options
 func WithMTU(mtu uint) net.Opt {
 	return func(o *net.Options) error {
-		netint.EnsureOptionsMap((*types.NetworkCreate)(o))
+		netint.EnsureOptionsMap((*network.CreateOptions)(o))
 		o.Options[driverOptionStem+"mtu"] = strconv.FormatUint(uint64(mtu), 10)
 		return nil
 	}
@@ -94,7 +94,7 @@ func WithMTU(mtu uint) net.Opt {
 // [Bridge network driver options]: https://docs.docker.com/network/drivers/bridge/#options
 func WithInterfacePrefix(prefix string) net.Opt {
 	return func(o *net.Options) error {
-		netint.EnsureOptionsMap((*types.NetworkCreate)(o))
+		netint.EnsureOptionsMap((*network.CreateOptions)(o))
 		o.Options[networkOptionStem+"container_iface_prefix"] = prefix
 		return nil
 	}

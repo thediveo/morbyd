@@ -90,7 +90,7 @@ func (mr *MockClientMockRecorder) ContainerCreate(arg0, arg1, arg2, arg3, arg4, 
 }
 
 // ContainerExecAttach mocks base method.
-func (m *MockClient) ContainerExecAttach(arg0 context.Context, arg1 string, arg2 types.ExecStartCheck) (types.HijackedResponse, error) {
+func (m *MockClient) ContainerExecAttach(arg0 context.Context, arg1 string, arg2 container.ExecStartOptions) (types.HijackedResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ContainerExecAttach", arg0, arg1, arg2)
 	ret0, _ := ret[0].(types.HijackedResponse)
@@ -105,7 +105,7 @@ func (mr *MockClientMockRecorder) ContainerExecAttach(arg0, arg1, arg2 any) *gom
 }
 
 // ContainerExecCreate mocks base method.
-func (m *MockClient) ContainerExecCreate(arg0 context.Context, arg1 string, arg2 types.ExecConfig) (types.IDResponse, error) {
+func (m *MockClient) ContainerExecCreate(arg0 context.Context, arg1 string, arg2 container.ExecOptions) (types.IDResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ContainerExecCreate", arg0, arg1, arg2)
 	ret0, _ := ret[0].(types.IDResponse)
@@ -120,10 +120,10 @@ func (mr *MockClientMockRecorder) ContainerExecCreate(arg0, arg1, arg2 any) *gom
 }
 
 // ContainerExecInspect mocks base method.
-func (m *MockClient) ContainerExecInspect(arg0 context.Context, arg1 string) (types.ContainerExecInspect, error) {
+func (m *MockClient) ContainerExecInspect(arg0 context.Context, arg1 string) (container.ExecInspect, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ContainerExecInspect", arg0, arg1)
-	ret0, _ := ret[0].(types.ContainerExecInspect)
+	ret0, _ := ret[0].(container.ExecInspect)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -135,7 +135,7 @@ func (mr *MockClientMockRecorder) ContainerExecInspect(arg0, arg1 any) *gomock.C
 }
 
 // ContainerExecStart mocks base method.
-func (m *MockClient) ContainerExecStart(arg0 context.Context, arg1 string, arg2 types.ExecStartCheck) error {
+func (m *MockClient) ContainerExecStart(arg0 context.Context, arg1 string, arg2 container.ExecStartOptions) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ContainerExecStart", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
@@ -366,10 +366,10 @@ func (mr *MockClientMockRecorder) ImageTag(arg0, arg1, arg2 any) *gomock.Call {
 }
 
 // NetworkCreate mocks base method.
-func (m *MockClient) NetworkCreate(arg0 context.Context, arg1 string, arg2 types.NetworkCreate) (types.NetworkCreateResponse, error) {
+func (m *MockClient) NetworkCreate(arg0 context.Context, arg1 string, arg2 network.CreateOptions) (network.CreateResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "NetworkCreate", arg0, arg1, arg2)
-	ret0, _ := ret[0].(types.NetworkCreateResponse)
+	ret0, _ := ret[0].(network.CreateResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -381,10 +381,10 @@ func (mr *MockClientMockRecorder) NetworkCreate(arg0, arg1, arg2 any) *gomock.Ca
 }
 
 // NetworkInspect mocks base method.
-func (m *MockClient) NetworkInspect(arg0 context.Context, arg1 string, arg2 types.NetworkInspectOptions) (types.NetworkResource, error) {
+func (m *MockClient) NetworkInspect(arg0 context.Context, arg1 string, arg2 network.InspectOptions) (network.Inspect, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "NetworkInspect", arg0, arg1, arg2)
-	ret0, _ := ret[0].(types.NetworkResource)
+	ret0, _ := ret[0].(network.Inspect)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -396,10 +396,10 @@ func (mr *MockClientMockRecorder) NetworkInspect(arg0, arg1, arg2 any) *gomock.C
 }
 
 // NetworkList mocks base method.
-func (m *MockClient) NetworkList(arg0 context.Context, arg1 types.NetworkListOptions) ([]types.NetworkResource, error) {
+func (m *MockClient) NetworkList(arg0 context.Context, arg1 network.ListOptions) ([]network.Inspect, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "NetworkList", arg0, arg1)
-	ret0, _ := ret[0].([]types.NetworkResource)
+	ret0, _ := ret[0].([]network.Inspect)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

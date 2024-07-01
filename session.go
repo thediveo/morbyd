@@ -19,9 +19,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/thediveo/morbyd/moby"
 	"github.com/thediveo/morbyd/session"
@@ -117,7 +117,7 @@ func (s *Session) autoClean(ctx context.Context, aclabel string) {
 
 	// List all matching networks (which by now should not have any test
 	// containers attached to them anymore) and then remove them.
-	nets, err := s.moby.NetworkList(ctx, types.NetworkListOptions{
+	nets, err := s.moby.NetworkList(ctx, network.ListOptions{
 		Filters: f,
 	})
 	if err != nil {
@@ -150,7 +150,7 @@ func (s *Session) Container(ctx context.Context, nameID string) (*Container, err
 // otherwise it returns an error. Please note that multiple calls for the same
 // name or ID will return different *Network objects, as there is no caching.
 func (s *Session) Network(ctx context.Context, nameID string) (*Network, error) {
-	details, err := s.moby.NetworkInspect(ctx, nameID, types.NetworkInspectOptions{
+	details, err := s.moby.NetworkInspect(ctx, nameID, network.InspectOptions{
 		Verbose: true,
 	})
 	if err != nil {

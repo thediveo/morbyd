@@ -17,10 +17,10 @@ package morbyd
 import (
 	"context"
 	"fmt"
+	"maps"
 
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/network"
 	"github.com/thediveo/morbyd/net"
-	"golang.org/x/exp/maps"
 )
 
 // CreateNetwork creates a new “custom” Docker network using the specified
@@ -40,8 +40,7 @@ import (
 // [docker network create]: https://docs.docker.com/engine/reference/commandline/network_create/
 func (s *Session) CreateNetwork(ctx context.Context, name string, opts ...net.Opt) (*Network, error) {
 	nopts := net.Options{
-		CheckDuplicate: true, // client now enforces this even before API v1.44
-		Labels:         map[string]string{},
+		Labels: map[string]string{},
 	}
 	maps.Copy(nopts.Labels, s.opts.Labels)
 	for _, opt := range opts {
@@ -50,13 +49,13 @@ func (s *Session) CreateNetwork(ctx context.Context, name string, opts ...net.Op
 		}
 	}
 
-	createResp, err := s.moby.NetworkCreate(ctx, name, types.NetworkCreate(nopts))
+	createResp, err := s.moby.NetworkCreate(ctx, name, network.CreateOptions(nopts))
 	if err != nil {
 		return nil, fmt.Errorf("cannot create new network %q, reason: %w",
 			name, err)
 	}
 
-	detailsResp, err := s.moby.NetworkInspect(ctx, createResp.ID, types.NetworkInspectOptions{
+	detailsResp, err := s.moby.NetworkInspect(ctx, createResp.ID, network.InspectOptions{
 		Verbose: true,
 	})
 	if err != nil {

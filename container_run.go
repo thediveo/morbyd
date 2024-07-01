@@ -18,11 +18,11 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"maps"
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/thediveo/morbyd/run"
-	"golang.org/x/exp/maps"
 )
 
 // Run (create and start) a new container, using the referenced image and

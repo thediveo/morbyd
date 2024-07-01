@@ -19,7 +19,7 @@ import (
 	"errors"
 	"time"
 
-	types "github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	mock "go.uber.org/mock/gomock"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -45,7 +45,7 @@ var _ = Describe("PIDs of commands executing inside containers", Ordered, func()
 		})
 		rec := sess.Client().(*MockClient).EXPECT()
 
-		rec.ContainerExecInspect(Any, Any).Return(types.ContainerExecInspect{}, errors.New("error IJK305I"))
+		rec.ContainerExecInspect(Any, Any).Return(container.ExecInspect{}, errors.New("error IJK305I"))
 
 		ex := &ExecSession{
 			Container: &Container{
@@ -64,7 +64,7 @@ var _ = Describe("PIDs of commands executing inside containers", Ordered, func()
 		})
 		rec := sess.Client().(*MockClient).EXPECT()
 
-		rec.ContainerExecInspect(Any, Any).Return(types.ContainerExecInspect{}, nil)
+		rec.ContainerExecInspect(Any, Any).Return(container.ExecInspect{}, nil)
 
 		ex := &ExecSession{
 			Container: &Container{

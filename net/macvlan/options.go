@@ -15,7 +15,7 @@
 package macvlan
 
 import (
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/network"
 	"github.com/thediveo/morbyd/internal/netint"
 	"github.com/thediveo/morbyd/net"
 )
@@ -38,7 +38,7 @@ const (
 // [Macvlan network driver options]: https://docs.docker.com/network/drivers/macvlan/#options
 func WithParent(ifname string) net.Opt {
 	return func(o *net.Options) error {
-		netint.EnsureOptionsMap((*types.NetworkCreate)(o))
+		netint.EnsureOptionsMap((*network.CreateOptions)(o))
 		o.Options["parent"] = ifname
 		return nil
 	}
@@ -66,7 +66,7 @@ func WithParent(ifname string) net.Opt {
 // [Macvlan network driver options]: https://docs.docker.com/network/drivers/macvlan/#options
 func WithMode(mode MACVLANMode) net.Opt {
 	return func(o *net.Options) error {
-		netint.EnsureOptionsMap((*types.NetworkCreate)(o))
+		netint.EnsureOptionsMap((*network.CreateOptions)(o))
 		o.Options["macvlan_mode"] = string(mode)
 		return nil
 	}

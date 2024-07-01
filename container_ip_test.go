@@ -82,7 +82,7 @@ var _ = Describe("getting container IPs", Ordered, func() {
 
 		// These should be network IDs as opposed to names, but since these are
 		// on par, using names makes our mocking more self-descriptive.
-		rec.NetworkInspect(Any, mock.Eq("mac-wie-lahm"), Any).Return(types.NetworkResource{
+		rec.NetworkInspect(Any, mock.Eq("mac-wie-lahm"), Any).Return(network.Summary{
 			Driver: "macvlan",
 		}, nil)
 
@@ -113,7 +113,7 @@ var _ = Describe("getting container IPs", Ordered, func() {
 
 		// These should be network IDs as opposed to names, but since these are
 		// on par, using names makes our mocking more self-descriptive.
-		rec.NetworkInspect(Any, Any, Any).Return(types.NetworkResource{}, errors.New("error IJK305I"))
+		rec.NetworkInspect(Any, Any, Any).Return(network.Summary{}, errors.New("error IJK305I"))
 
 		cntr := &Container{
 			Session: sess,
@@ -142,10 +142,10 @@ var _ = Describe("getting container IPs", Ordered, func() {
 
 		// These should be network IDs as opposed to names, but since these are
 		// on par, using names makes our mocking more self-descriptive.
-		rec.NetworkInspect(Any, mock.Eq("bubble"), Any).Return(types.NetworkResource{
+		rec.NetworkInspect(Any, mock.Eq("bubble"), Any).Return(network.Summary{
 			Driver: "null",
 		}, nil)
-		rec.NetworkInspect(Any, mock.Eq("bridged"), Any).MinTimes(0).MaxTimes(1).Return(types.NetworkResource{
+		rec.NetworkInspect(Any, mock.Eq("bridged"), Any).MinTimes(0).MaxTimes(1).Return(network.Summary{
 			Driver: "bridge",
 		}, nil)
 
@@ -180,7 +180,7 @@ var _ = Describe("getting container IPs", Ordered, func() {
 
 		// These should be network IDs as opposed to names, but since these are
 		// on par, using names makes our mocking more self-descriptive.
-		rec.NetworkInspect(Any, mock.Eq("horscht"), Any).Return(types.NetworkResource{
+		rec.NetworkInspect(Any, mock.Eq("horscht"), Any).Return(network.Summary{
 			Driver: "host",
 		}, nil)
 
@@ -211,7 +211,7 @@ var _ = Describe("getting container IPs", Ordered, func() {
 
 		// These should be network IDs as opposed to names, but since these are
 		// on par, using names makes our mocking more self-descriptive.
-		rec.NetworkInspect(Any, mock.Eq("bubble"), Any).Return(types.NetworkResource{
+		rec.NetworkInspect(Any, mock.Eq("bubble"), Any).Return(network.Summary{
 			Driver: "bridge",
 		}, nil)
 
