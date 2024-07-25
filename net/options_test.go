@@ -57,6 +57,14 @@ var _ = Describe("network options", func() {
 		Expect(netos.Labels).To(HaveKeyWithValue("bar", "baz"))
 	})
 
+	It("enables and disables IPv6", func() {
+		var opts Options
+		Expect(WithIPv6()(&opts)).To(Succeed())
+		Expect(opts.EnableIPv6).To(HaveValue(BeTrue()))
+		Expect(WithoutIPv6()(&opts)).To(Succeed())
+		Expect(opts.EnableIPv6).To(HaveValue(BeFalse()))
+	})
+
 	It("rejects invalid net options", func() {
 		var opts Options
 		Expect(WithLabels("=")(&opts)).To(HaveOccurred())

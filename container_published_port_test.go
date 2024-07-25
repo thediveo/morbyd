@@ -18,7 +18,9 @@ import (
 	context "context"
 	io "io"
 	"net/http"
+	"strings"
 
+	"github.com/thediveo/morbyd/net"
 	"github.com/thediveo/morbyd/run"
 	"github.com/thediveo/morbyd/session"
 	"github.com/thediveo/morbyd/timestamper"
@@ -42,8 +44,13 @@ var _ = Describe("published container ports", Ordered, func() {
 				`echo "DOH!" > index.html && httpd -v -f -p 1234`),
 			run.WithAutoRemove(),
 			run.WithCombinedOutput(timestamper.New(GinkgoWriter)),
+			// It's not possible (anymore) to publish the port both at the
+			// unspecified IP/IPv6 addresses, as well as on the IPv6 loopback
+			// address: this will fail with a bind error in the "userland
+			// proxy". Thus, we publish on a fixed port on IPv6 loopback to work
+			// around this restriction.
 			run.WithPublishedPort("1234"),
-			run.WithPublishedPort("[::1]:1234/tcp"),
+			run.WithPublishedPort("[::1]:1234:1234/tcp"),
 		))
 
 		svcAddrs := cntr.PublishedPort("1234")
@@ -71,6 +78,37 @@ var _ = Describe("published container ports", Ordered, func() {
 		Expect(resp.StatusCode).To(Equal(http.StatusOK))
 		defer resp.Body.Close()
 		Expect(string(Successful(io.ReadAll(resp.Body)))).To(Equal("DOH!\n"))
+	})
+
+	It("publishes ports on an IPv6 custom Docker network", func(ctx context.Context) {
+		sess := Successful(NewSession(ctx,
+			session.WithAutoCleaning("test.morbyd=container.portv6")))
+		DeferCleanup(func(ctx context.Context) { sess.Close(ctx) })
+
+		v6net, err := sess.CreateNetwork(ctx, "morbyd-v6notwork",
+			net.WithIPv6())
+		if err != nil && strings.Contains(err.Error(), "could not find an available, non-overlapping IPv6 address pool among the defaults") {
+			Skip("needs IPv6 pools for custom Docker networks")
+		}
+
+		By("spinning up an http serving busybox with published ports")
+		cntr := Successful(sess.Run(ctx,
+			"busybox",
+			run.WithCommand("/bin/sh", "-c",
+				`echo "DOH!" > index.html && httpd -v -f -p 1235`),
+			run.WithAutoRemove(),
+			run.WithCombinedOutput(timestamper.New(GinkgoWriter)),
+			run.WithNetwork(v6net.ID),
+			run.WithPublishedPort("[::1]:1235/tcp"),
+		))
+
+		svcAddrs := cntr.PublishedPort("1235")
+		Expect(svcAddrs).To(ConsistOf(
+			And(
+				HaveField("Network()", "tcp"),
+				MatchRegexp(`\[::1\]:\d+`),
+			),
+		))
 	})
 
 })

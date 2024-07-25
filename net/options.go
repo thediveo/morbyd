@@ -71,6 +71,15 @@ func WithIPv6() Opt {
 	}
 }
 
+// WithoutIPv6 disables IPv6 for the custom Docker network ... boo!
+func WithoutIPv6() Opt {
+	return func(o *Options) error {
+		f := false
+		o.EnableIPv6 = &f
+		return nil
+	}
+}
+
 // WithLabel adds a label in “KEY=VALUE” to the custom Docker network.
 func WithLabel(label string) Opt {
 	return func(o *Options) error {
