@@ -18,6 +18,7 @@ import (
 	context "context"
 	io "io"
 	"net/http"
+	"strings"
 
 	"github.com/thediveo/morbyd/net"
 	"github.com/thediveo/morbyd/run"
@@ -84,8 +85,11 @@ var _ = Describe("published container ports", Ordered, func() {
 			session.WithAutoCleaning("test.morbyd=container.portv6")))
 		DeferCleanup(func(ctx context.Context) { sess.Close(ctx) })
 
-		v6net := Successful(sess.CreateNetwork(ctx, "morbyd-v6notwork",
-			net.WithIPv6()))
+		v6net, err := sess.CreateNetwork(ctx, "morbyd-v6notwork",
+			net.WithIPv6())
+		if err != nil && strings.Contains(err.Error(), "could not find an available, non-overlapping IPv6 address pool among the defaults") {
+			Skip("needs IPv6 pools for custom Docker networks")
+		}
 
 		By("spinning up an http serving busybox with published ports")
 		cntr := Successful(sess.Run(ctx,
