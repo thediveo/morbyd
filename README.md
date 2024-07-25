@@ -7,7 +7,7 @@
 ![build and test](https://github.com/thediveo/morbyd/workflows/build%20and%20test/badge.svg?branch=master)
 ![goroutines](https://img.shields.io/badge/go%20routines-not%20leaking-success)
 [![Go Report Card](https://goreportcard.com/badge/github.com/thediveo/morbyd)](https://goreportcard.com/report/github.com/thediveo/morbyd)
-![Coverage](https://img.shields.io/badge/Coverage-99.1%25-brightgreen)
+![Coverage](https://img.shields.io/badge/Coverage-99.2%25-brightgreen)
 
 `morbyd` is a thin layer on top of the standard Docker Go client to easily build
 and run throw-away test Docker images and containers. And to easily run commands
@@ -35,11 +35,11 @@ elements, such as names, labels, and options.
 - [Session.Run](https://pkg.go.dev/github.com/thediveo/morbyd#Session.Run) a new
   container: options are in the
   [run](https://pkg.go.dev/github.com/thediveo/morbyd/run) package, such as
-  [WithCommand](https://pkg.go.dev/github.com/thediveo/morbyd/run#WithCommand)...
+  [WithCommand](https://pkg.go.dev/github.com/thediveo/morbyd/run#WithCommand), ...
 - [Container.Exec](https://pkg.go.dev/github.com/thediveo/morbyd#Container.Exec)ute
   a command inside a container: options are in the
   [exec](https://pkg.go.dev/github.com/thediveo/morbyd/exec) package, such as
-  [WithCombinedOutput](https://pkg.go.dev/github.com/thediveo/morbyd/exec#WithCombinedOutput)...
+  [WithCombinedOutput](https://pkg.go.dev/github.com/thediveo/morbyd/exec#WithCombinedOutput), ...
 - [Session.CreateNetwork](https://pkg.go.dev/github.com/thediveo/morbyd#Session.CreateNetwork):
   with options in the [net](https://pkg.go.dev/github.com/thediveo/morbyd/net)
   and [bridge](https://pkg.go.dev/github.com/thediveo/morbyd/net/bridge),
@@ -113,11 +113,15 @@ func main() {
     sess, _ := morbyd.NewSession(ctx, session.WithAutoCleaning("test.mytest="))
     defer sess.Close(ctx)
 
+    // run a container and copy the container's combined output
+    // of stdout and stderr to our stdout.
     cntr, _ := sess.Run(ctx, "busybox",
         run.WithCommand("/bin/sh", "-c", "while true; do sleep 1; done"),
         run.WithAutoRemove(),
         run.WithCombinedOutput(os.Stdout))
 
+    // run a command inside the container and wait for this command
+    // to finish.
     cmd, _ := cntr.Exec(ctx,
         exec.WithCommand("/bin/sh", "-c", "echo \"Hellorld!\""),
         exec.WithCombinedOutput(os.Stdout))
@@ -153,7 +157,7 @@ func main() {
     cntr, _ := sess.Run(ctx, "busybox",
         run.WithCommand("/bin/sh", "-c", `echo "DOH!" > index.html && httpd -f -p 1234`),
         run.WithAutoRemove(),
-        		run.WithPublishedPort("127.0.0.1:1234"))
+        run.WithPublishedPort("127.0.0.1:1234"))
 
     svcAddrPort := container.PublishedPort("1234").Any().UnspecifiedAsLoopback().String()
     req, _ := http.NewRequest(http.MethodGet, "http://"+svcAddrPort+"/", nil)
@@ -163,6 +167,39 @@ func main() {
     fmt.Sprintf("%s\n", body)
 }
 ```
+
+### Dealing with Container Output
+
+[safe.Buffer](https://pkg.go.dev/github.com/thediveo/morbyd/safe#Buffer) is the
+concurrency-safe drop-in sibling to Go's
+[bytes.Buffer](https://pkg.go.dev/bytes#Buffer): it is essential in unit tests
+that reason about container output without setting off Go's race detector. The
+reason is that container output is handled on background Go routines and
+simultaneously polling an unguarded `bytes.Buffer` causes a race. All you need
+to do is replace `bytes.Buffer` with `safe.Buffer` (which is just a thin
+mutex'ed wrapper), for instance, in this test leveraging
+[Gomega](https://onsi.github.io/gomega/):
+
+```go
+var buff safe.Buffer
+
+// run a container that outputs a magic phrase and then
+// keeps sleeping until the container gets terminated.
+Expect(cntr.Exec(ctx,
+  exec.Command("/bin/sh", "-c", "echo \"**FOO!**\" 1>&2; while true; do sleep 1; done"),
+  exec.WithTTY(),
+  exec.WithCombinedOutput(
+    io.MultiWriter(
+      &buff, timestamper.New(GinkgoWriter))))).To(Succeed())
+
+// ensure we got the magic phrase
+Eventually(buff.String).Should(Equal("**FOO!**\r\n"))
+```
+
+[timestamper.New](https://pkg.go.dev/github.com/thediveo/morbyd@v0.13.0/timestamper#New)
+returns a writer object implementing [io.Writer](https://pkg.go.dev/io#Writer)
+that time stamps each line of output. It has proven useful in debugging tests
+involving container output.
 
 ## Alternatives
 
