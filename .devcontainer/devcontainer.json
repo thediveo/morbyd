@@ -1,5 +1,5 @@
 {
-    "name": "morbyd",
+    "name": "morbyd (docker-in-docker)",
     "portsAttributes": {
         "6060": {
             "label": "morbyd package documentation",
