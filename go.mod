@@ -3,18 +3,18 @@ module github.com/thediveo/morbyd
 go 1.22.0
 
 require (
-	github.com/docker/docker v27.3.1+incompatible
+	github.com/docker/docker v27.4.1+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/docker/go-units v0.5.0
 	github.com/moby/patternmatcher v0.6.0
-	github.com/onsi/ginkgo/v2 v2.20.2
-	github.com/onsi/gomega v1.34.2
+	github.com/onsi/ginkgo/v2 v2.22.2
+	github.com/onsi/gomega v1.36.2
 	github.com/opencontainers/image-spec v1.1.0
 	github.com/pkg/errors v0.9.1
-	github.com/thediveo/fdooze v0.3.1
-	github.com/thediveo/success v1.0.2
-	go.uber.org/mock v0.4.0
-	golang.org/x/exp v0.0.0-20240909161429-701f63a606c0
+	github.com/thediveo/fdooze v0.3.2
+	github.com/thediveo/success v1.0.3
+	go.uber.org/mock v0.5.0
+	golang.org/x/exp v0.0.0-20250106191152-7588d65b2ba8
 )
 
 require (
@@ -30,7 +30,7 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
-	github.com/google/pprof v0.0.0-20240827171923-fa2c70bbbfe5 // indirect
+	github.com/google/pprof v0.0.0-20241210010833-40e02aabc2ad // indirect
 	github.com/klauspost/compress v1.17.4 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
@@ -47,11 +47,11 @@ require (
 	go.opentelemetry.io/otel/metric v1.21.0 // indirect
 	go.opentelemetry.io/otel/sdk v1.21.0 // indirect
 	go.opentelemetry.io/otel/trace v1.21.0 // indirect
-	golang.org/x/net v0.29.0 // indirect
-	golang.org/x/sys v0.25.0 // indirect
-	golang.org/x/text v0.18.0 // indirect
+	golang.org/x/net v0.34.0 // indirect
+	golang.org/x/sys v0.29.0 // indirect
+	golang.org/x/text v0.21.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
-	golang.org/x/tools v0.25.0 // indirect
+	golang.org/x/tools v0.29.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20231016165738-49dd2c1f3d0b // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20231016165738-49dd2c1f3d0b // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

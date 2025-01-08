@@ -4,10 +4,10 @@
 
 [![PkgGoDev](https://img.shields.io/badge/-reference-blue?logo=go&logoColor=white&labelColor=505050)](https://pkg.go.dev/github.com/thediveo/morbyd)
 [![License](https://img.shields.io/github/license/thediveo/morbyd)](https://img.shields.io/github/license/thediveo/morbyd)
-![build and test](https://github.com/thediveo/morbyd/workflows/build%20and%20test/badge.svg?branch=master)
+![build and test](https://github.com/thediveo/morbyd/actions/workflows/buildandtest.yaml/badge.svg?branch=master)
 ![goroutines](https://img.shields.io/badge/go%20routines-not%20leaking-success)
 [![Go Report Card](https://goreportcard.com/badge/github.com/thediveo/morbyd)](https://goreportcard.com/report/github.com/thediveo/morbyd)
-![Coverage](https://img.shields.io/badge/Coverage-99.2%25-brightgreen)
+![Coverage](https://img.shields.io/badge/Coverage-99.1%25-brightgreen)
 
 `morbyd` is a thin layer on top of the standard Docker Go client to easily build
 and run throw-away test Docker images and containers. And to easily run commands
@@ -46,6 +46,9 @@ elements, such as names, labels, and options.
   [macvlan](https://pkg.go.dev/github.com/thediveo/morbyd/net/macvlan),
   [ipvlan](https://pkg.go.dev/github.com/thediveo/morbyd/net/ipvlan) sub
   packages.
+
+For devcontainer instructions, please see the [section "DevContainer"
+below](#devcontainer).
 
 ## Features of morbyd
 
@@ -220,6 +223,18 @@ battle-proven tools for using Docker images and containers in Go tests?
   infrastructure – while I admire this design, it is difficult to understand
   what _exactly_ is happening. Better keep it simple.
 
+## DevContainer
+
+> [!CAUTION]
+>
+> Do **not** use VSCode's "~~Dev Containers: Clone Repository in Container
+> Volume~~" command, as it is utterly broken by design, ignoring
+> `.devcontainer/devcontainer.json`.
+
+1. `git clone https://github.com/thediveo/enumflag`
+2. in VSCode: Ctrl+Shift+P, "Dev Containers: Open Workspace in Container..."
+3. select `enumflag.code-workspace` and off you go...
+
 ## Supported Go Versions
 
 `morbyd` supports versions of Go that are noted by the [Go release
@@ -232,7 +247,7 @@ Please see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Copyright and License
 
-`morbyd` is Copyright 2024 Harald Albrecht, and licensed under the Apache
+`morbyd` is Copyright 2024, 2025 Harald Albrecht, and licensed under the Apache
 License, Version 2.0.
 
 The package `github.com/thediveo/morbyd/run/dockercli` is [Copyright 2013-2017
