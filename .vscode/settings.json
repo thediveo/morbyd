@@ -1,6 +1,0 @@
-{
-    "go.testFlags": [
-        "-race"
-    ],
-    "go.testTimeout": "300s"
-}

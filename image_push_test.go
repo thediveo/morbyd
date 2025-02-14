@@ -88,4 +88,38 @@ var _ = Describe("pushing images", Ordered, func() {
 		Expect(sess.PushImage(ctx, "buzzybocks:earliest")).NotTo(Succeed())
 	})
 
+	It("reports options errors before attempting to push", func(ctx context.Context) {
+		ctrl := mock.NewController(GinkgoT())
+		sess := Successful(NewSession(ctx,
+			WithMockController(ctrl, "ImagePush")))
+		DeferCleanup(func(ctx context.Context) {
+			sess.Close(ctx)
+		})
+		rec := sess.Client().(*MockClient).EXPECT()
+		rec.ImagePush(Any, Any, Any).Times(0)
+
+		Expect(sess.PushImage(ctx, "buzzybocks:earliest",
+			WithPushImagePlatform("arm-selig"))).Error().To(
+			MatchError(ContainSubstring(`"arm-selig": unknown operating system or architecture`)))
+	})
+
+	Context("options", func() {
+
+		It("pushes all tags", func() {
+			var pios pushImageOptions
+			Expect(WithPushImageAllTags()(&pios)).To(Succeed())
+			Expect(pios.All).To(BeTrue())
+		})
+
+		It("specifies a platform", func() {
+			var pios pushImageOptions
+			Expect(WithPushImagePlatform("leinucks/arm64")(&pios)).To(Succeed())
+			Expect(pios.Platform).To(And(
+				HaveField("OS", "leinucks"),
+				HaveField("Architecture", "arm64"),
+			))
+		})
+
+	})
+
 })
