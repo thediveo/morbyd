@@ -1,4 +1,4 @@
-// Copyright 2024 Harald Albrecht.
+// Copyright 2025 Harald Albrecht.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package morbyd
+package pull
 
 import (
 	"testing"
@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestMorbyd(t *testing.T) {
+func TestMorbydPullImage(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "morbyd package")
+	RunSpecs(t, "morbyd/pull package")
 }
