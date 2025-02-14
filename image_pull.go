@@ -23,6 +23,8 @@ import (
 	"github.com/docker/docker/pkg/jsonmessage"
 )
 
+// PullImageOpt is a configuration option to pull a containerf image using
+// [Session.PullImage].
 type PullImageOpt func(*pullImageOptions)
 
 type pullImageOptions struct {
@@ -56,7 +58,7 @@ func (s *Session) PullImage(ctx context.Context, imgref string, opts ...PullImag
 	return err
 }
 
-// WithImageBuildOutput set the writer to send the output of the image pull
+// WithPullImageOutput specifies the writer to send the output of the image pull
 // process to.
 func WithPullImageOutput(w io.Writer) PullImageOpt {
 	return func(pios *pullImageOptions) {

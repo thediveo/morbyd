@@ -5,6 +5,12 @@
 		}
 	],
 	"settings": {
-		"go.lintTool": "golangci-lint"
+		"go.lintTool": "golangci-lint",
+		"go.testTimeout": "300s",
+		"go.testFlags": [
+			"-v",
+			"-race",
+			"--ginkgo.no-color"
+		]
 	}
 }
