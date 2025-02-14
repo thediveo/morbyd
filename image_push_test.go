@@ -1,4 +1,4 @@
-// Copyright 2024 Harald Albrecht.
+// Copyright 2025 Harald Albrecht.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ import (
 	. "github.com/thediveo/success"
 )
 
-var _ = Describe("pulling images", func() {
+var _ = Describe("pushing images", Ordered, func() {
 
 	BeforeEach(func(ctx context.Context) {
 		goodgos := Goroutines()
@@ -40,10 +40,10 @@ var _ = Describe("pulling images", func() {
 		})
 	})
 
-	It("pulls an image", func(ctx context.Context) {
+	It("pushes an image", func(ctx context.Context) {
 		ctrl := mock.NewController(GinkgoT())
 		sess := Successful(NewSession(ctx,
-			WithMockController(ctrl, "ImagePull")))
+			WithMockController(ctrl, "ImagePush")))
 		DeferCleanup(func(ctx context.Context) {
 			sess.Close(ctx)
 		})
@@ -52,30 +52,30 @@ var _ = Describe("pulling images", func() {
 		rc := io.NopCloser(strings.NewReader(`
 {"status":"foobar"}
 `))
-		rec.ImagePull(Any, Any, Any).Return(rc, nil)
+		rec.ImagePush(Any, Any, Any).Return(rc, nil)
 
 		var buff bytes.Buffer
-		Expect(sess.PullImage(ctx, "buzzybocks:earliest", WithPullImageOutput(&buff))).To(Succeed())
+		Expect(sess.PushImage(ctx, "buzzybocks:earliest", WithPushImageOutput(&buff))).To(Succeed())
 		Expect(buff.String()).To(Equal("foobar\n"))
 	})
 
 	It("reports API errors", func(ctx context.Context) {
 		ctrl := mock.NewController(GinkgoT())
 		sess := Successful(NewSession(ctx,
-			WithMockController(ctrl, "ImagePull")))
+			WithMockController(ctrl, "ImagePush")))
 		DeferCleanup(func(ctx context.Context) {
 			sess.Close(ctx)
 		})
 		rec := sess.Client().(*MockClient).EXPECT()
-		rec.ImagePull(Any, Any, Any).Return(nil, errors.New("error IJK305I"))
+		rec.ImagePush(Any, Any, Any).Return(nil, errors.New("error IJK305I"))
 
-		Expect(sess.PullImage(ctx, "buzzybocks:earliest")).NotTo(Succeed())
+		Expect(sess.PushImage(ctx, "buzzybocks:earliest")).NotTo(Succeed())
 	})
 
 	It("reports stream errors", func(ctx context.Context) {
 		ctrl := mock.NewController(GinkgoT())
 		sess := Successful(NewSession(ctx,
-			WithMockController(ctrl, "ImagePull")))
+			WithMockController(ctrl, "ImagePush")))
 		DeferCleanup(func(ctx context.Context) {
 			sess.Close(ctx)
 		})
@@ -83,9 +83,9 @@ var _ = Describe("pulling images", func() {
 		rc := io.NopCloser(strings.NewReader(`
 {"errorDetail":{"code":666,"message":"error IJK305I"}}
 `))
-		rec.ImagePull(Any, Any, Any).Return(rc, nil)
+		rec.ImagePush(Any, Any, Any).Return(rc, nil)
 
-		Expect(sess.PullImage(ctx, "buzzybocks:earliest")).NotTo(Succeed())
+		Expect(sess.PushImage(ctx, "buzzybocks:earliest")).NotTo(Succeed())
 	})
 
 })

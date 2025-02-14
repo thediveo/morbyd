@@ -172,6 +172,12 @@ func newWrappedClient(ctrl *mock.Controller, wrapped moby.Client, withouts []str
 				return wrapped.ImagePull(ctx, refStr, options)
 			})
 	}
+	if !slices.Contains(withouts, "ImagePush") {
+		rec.ImagePush(Any, Any, Any).AnyTimes().
+			DoAndReturn(func(ctx context.Context, image string, options image.PushOptions) (io.ReadCloser, error) {
+				return wrapped.ImagePush(ctx, image, options)
+			})
+	}
 	if !slices.Contains(withouts, "ImageRemove") {
 		rec.ImageRemove(Any, Any, Any).AnyTimes().
 			DoAndReturn(func(ctx context.Context, imageID string, options image.RemoveOptions) ([]image.DeleteResponse, error) {
