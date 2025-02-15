@@ -27,6 +27,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gleak"
+	"github.com/thediveo/morbyd/pull"
 	. "github.com/thediveo/success"
 )
 
@@ -55,7 +56,7 @@ var _ = Describe("pulling images", func() {
 		rec.ImagePull(Any, Any, Any).Return(rc, nil)
 
 		var buff bytes.Buffer
-		Expect(sess.PullImage(ctx, "buzzybocks:earliest", WithPullImageOutput(&buff))).To(Succeed())
+		Expect(sess.PullImage(ctx, "buzzybocks:earliest", pull.WithOutput(&buff))).To(Succeed())
 		Expect(buff.String()).To(Equal("foobar\n"))
 	})
 

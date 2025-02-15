@@ -15,13 +15,22 @@
 package morbyd
 
 import (
-	"testing"
+	"github.com/docker/docker/client"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gcustom"
+	"github.com/onsi/gomega/types"
 )
 
-func TestMorbyd(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "morbyd package")
+// HaventFoundContainer returns a Gomega matcher that matches Docker's
+// (resource) “not found” error.
+func HaventFoundContainer() types.GomegaMatcher {
+	return gcustom.MakeMatcher(
+		func(err error) (bool, error) { return client.IsErrNotFound(err), nil })
+}
+
+// HaventFoundNetwork returns a Gomega matcher that matches Docker's
+// (resource) “not found” error.
+func HaventFoundNetwork() types.GomegaMatcher {
+	return gcustom.MakeMatcher(
+		func(err error) (bool, error) { return client.IsErrNotFound(err), nil })
 }

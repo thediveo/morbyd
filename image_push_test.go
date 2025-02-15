@@ -27,6 +27,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gleak"
+	"github.com/thediveo/morbyd/push"
 	. "github.com/thediveo/success"
 )
 
@@ -55,7 +56,7 @@ var _ = Describe("pushing images", Ordered, func() {
 		rec.ImagePush(Any, Any, Any).Return(rc, nil)
 
 		var buff bytes.Buffer
-		Expect(sess.PushImage(ctx, "buzzybocks:earliest", WithPushImageOutput(&buff))).To(Succeed())
+		Expect(sess.PushImage(ctx, "buzzybocks:earliest", push.WithOutput(&buff))).To(Succeed())
 		Expect(buff.String()).To(Equal("foobar\n"))
 	})
 
@@ -99,27 +100,8 @@ var _ = Describe("pushing images", Ordered, func() {
 		rec.ImagePush(Any, Any, Any).Times(0)
 
 		Expect(sess.PushImage(ctx, "buzzybocks:earliest",
-			WithPushImagePlatform("arm-selig"))).Error().To(
+			push.WithPlatform("arm-selig"))).Error().To(
 			MatchError(ContainSubstring(`"arm-selig": unknown operating system or architecture`)))
-	})
-
-	Context("options", func() {
-
-		It("pushes all tags", func() {
-			var pios pushImageOptions
-			Expect(WithPushImageAllTags()(&pios)).To(Succeed())
-			Expect(pios.All).To(BeTrue())
-		})
-
-		It("specifies a platform", func() {
-			var pios pushImageOptions
-			Expect(WithPushImagePlatform("leinucks/arm64")(&pios)).To(Succeed())
-			Expect(pios.Platform).To(And(
-				HaveField("OS", "leinucks"),
-				HaveField("Architecture", "arm64"),
-			))
-		})
-
 	})
 
 })

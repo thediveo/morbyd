@@ -19,49 +19,31 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/pkg/jsonmessage"
+	"github.com/thediveo/morbyd/pull"
 )
-
-// PullImageOpt is a configuration option to pull a containerf image using
-// [Session.PullImage].
-type PullImageOpt func(*pullImageOptions)
-
-type pullImageOptions struct {
-	image.PullOptions
-	out io.Writer
-}
 
 // PullImage pulls a container image specified by the image reference, if not
 // already locally available. The additional pull options are applied in the
 // order they are provided.
 //
-// If no pull process output writer has been specified using
-// [WithPullImageOutput] any output (such as pull progress, et cetera) will
-// simply be discarded.
+// If no pull process output writer has been specified using [pull.WithOutput]
+// any output (such as pull progress, et cetera) will simply be discarded.
 //
 // Any pull process errors will be reported.
-func (s *Session) PullImage(ctx context.Context, imgref string, opts ...PullImageOpt) error {
-	pios := pullImageOptions{}
+func (s *Session) PullImage(ctx context.Context, imgref string, opts ...pull.Opt) error {
+	pios := pull.Options{}
 	for _, opt := range opts {
 		opt(&pios)
 	}
-	if pios.out == nil {
-		pios.out = io.Discard
+	if pios.Out == nil {
+		pios.Out = io.Discard
 	}
 	r, err := s.moby.ImagePull(ctx, imgref, pios.PullOptions)
 	if err != nil {
 		return fmt.Errorf("image pull failed, reason: %w", err)
 	}
 	defer r.Close()
-	err = jsonmessage.DisplayJSONMessagesStream(r, pios.out, 0, false, nil)
+	err = jsonmessage.DisplayJSONMessagesStream(r, pios.Out, 0, false, nil)
 	return err
-}
-
-// WithPullImageOutput specifies the writer to send the output of the image pull
-// process to.
-func WithPullImageOutput(w io.Writer) PullImageOpt {
-	return func(pios *pullImageOptions) {
-		pios.out = w
-	}
 }

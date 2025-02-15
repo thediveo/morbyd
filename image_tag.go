@@ -1,4 +1,4 @@
-// Copyright 2024 Harald Albrecht.
+// Copyright 2025 Harald Albrecht.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,13 +15,10 @@
 package morbyd
 
 import (
-	"testing"
-
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"context"
 )
 
-func TestMorbyd(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "morbyd package")
+// TagImage tags a container image.
+func (s *Session) TagImage(ctx context.Context, source, target string) error {
+	return s.moby.ImageTag(ctx, source, target)
 }

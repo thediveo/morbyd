@@ -7,7 +7,7 @@
 ![build and test](https://github.com/thediveo/morbyd/actions/workflows/buildandtest.yaml/badge.svg?branch=master)
 ![goroutines](https://img.shields.io/badge/go%20routines-not%20leaking-success)
 [![Go Report Card](https://goreportcard.com/badge/github.com/thediveo/morbyd)](https://goreportcard.com/report/github.com/thediveo/morbyd)
-![Coverage](https://img.shields.io/badge/Coverage-97.9%25-brightgreen)
+![Coverage](https://img.shields.io/badge/Coverage-98.7%25-brightgreen)
 
 `morbyd` is a thin layer on top of the standard Docker Go client to easily build
 and run throw-away test Docker images and containers. And to easily run commands

@@ -19,67 +19,26 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/containerd/platforms"
-	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/pkg/jsonmessage"
+	"github.com/thediveo/morbyd/push"
 )
 
-// PushImageOpt is a configuration option to push a containerf image using
-// [Session.PushImage].
-type PushImageOpt func(*pushImageOptions) error
-
-type pushImageOptions struct {
-	image.PushOptions
-	out io.Writer
-}
-
 // PushImage pushes a container image to a container registry.
-func (s *Session) PushImage(ctx context.Context, image string, opts ...PushImageOpt) error {
-	pios := pushImageOptions{}
+func (s *Session) PushImage(ctx context.Context, image string, opts ...push.Opt) error {
+	popts := push.Options{}
 	for _, opt := range opts {
-		if err := opt(&pios); err != nil {
+		if err := opt(&popts); err != nil {
 			return err
 		}
 	}
-	if pios.out == nil {
-		pios.out = io.Discard
+	if popts.Out == nil {
+		popts.Out = io.Discard
 	}
-	r, err := s.moby.ImagePush(ctx, image, pios.PushOptions)
+	r, err := s.moby.ImagePush(ctx, image, popts.PushOptions)
 	if err != nil {
 		return fmt.Errorf("image push failed, reason: %w", err)
 	}
 	defer r.Close()
-	err = jsonmessage.DisplayJSONMessagesStream(r, pios.out, 0, false, nil)
+	err = jsonmessage.DisplayJSONMessagesStream(r, popts.Out, 0, false, nil)
 	return err
-}
-
-// WithPushImageOutput specifies the writer to send the output of the image pull
-// process to.
-func WithPushImageOutput(w io.Writer) PushImageOpt {
-	return func(pios *pushImageOptions) error {
-		pios.out = w
-		return nil
-	}
-}
-
-// WithPushImageAllTags specifies that all tags of the image are to be pushed to
-// the repository.
-func WithPushImageAllTags() PushImageOpt {
-	return func(pios *pushImageOptions) error {
-		pios.All = true
-		return nil
-	}
-}
-
-// WithPushImagePlatform specifies to push a platform-specific manifest as a
-// single-platform image to the registry.
-func WithPushImagePlatform(platform string) PushImageOpt {
-	return func(pios *pushImageOptions) error {
-		p, err := platforms.Parse(platform)
-		if err != nil {
-			return err
-		}
-		pios.Platform = &p
-		return nil
-	}
 }
