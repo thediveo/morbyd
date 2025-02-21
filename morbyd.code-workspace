@@ -11,6 +11,27 @@
 			"-v",
 			"-race",
 			"--ginkgo.no-color"
+		],
+		"statsBar.memoUsage.format": "$(chip) ${used}/${total} ${unit}, ${percent}%",
+		"statsBar.location": "Right",
+	},
+	"launch": {
+		"version": "0.2.0",
+		"configurations": [
+			{
+				"name": "Debug/Test Package",
+				"type": "go",
+				"request": "launch",
+				"mode": "auto",
+				"program": "${fileDirname}"
+			}
+		],
+		"compounds": []
+	},
+	"extensions": {
+		"recommendations": [
+			"ms-vscode.live-server",
+			"njzy.stats-bar"
 		]
 	}
 }
