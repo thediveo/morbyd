@@ -57,6 +57,23 @@ var _ = Describe("containers", Ordered, func() {
 		Expect(time.Since(start)).To(BeNumerically(">=", 4*time.Second))
 	})
 
+	It("pauses and unpauses a container", func(ctx context.Context) {
+		cntr := Successful(sess.Run(ctx, "busybox",
+			run.WithCommand("/bin/sh", "-c", "while true; do sleep 1; done"),
+			run.WithAutoRemove(),
+			run.WithCombinedOutput(timestamper.New(GinkgoWriter)),
+		))
+		Expect(cntr.PID(ctx)).Error().NotTo(HaveOccurred())
+
+		Expect(cntr.Pause(ctx)).To(Succeed())
+		Expect(cntr.Refresh(ctx)).To(Succeed())
+		Expect(cntr.Details.State.Paused).To(BeTrue())
+
+		Expect(cntr.Unpause(ctx)).To(Succeed())
+		Expect(cntr.Refresh(ctx)).To(Succeed())
+		Expect(cntr.Details.State.Paused).To(BeFalse())
+	})
+
 	It("stops a container cooperatively", func(ctx context.Context) {
 		var buff safe.Buffer
 

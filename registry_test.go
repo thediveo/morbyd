@@ -17,6 +17,7 @@ package morbyd
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/thediveo/morbyd/pull"
@@ -51,10 +52,23 @@ var _ = Describe("given a (local) registry", Ordered, Serial, func() {
 			sess.Close(ctx)
 		})
 		By("starting a local container registry")
-		_ = Successful(sess.Run(ctx, "registry:2",
+		Expect(sess.Run(ctx, "registry:2",
 			run.WithName("local-registry"),
 			run.WithPublishedPort(fmt.Sprintf("127.0.0.1:%d:5000", registryPort)),
-			run.WithAutoRemove()))
+			run.WithAutoRemove())).Error().NotTo(HaveOccurred())
+		By("waiting for the registry to become operational")
+		Eventually(func() error {
+			resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/v2/", registryPort))
+			if err != nil {
+				return err
+			}
+			defer resp.Body.Close()
+			if resp.StatusCode != http.StatusOK {
+				return fmt.Errorf("HTTP status code %d", resp.StatusCode)
+			}
+			return nil
+		}).Within(5 * time.Second).ProbeEvery(250 * time.Millisecond).
+			Should(Succeed())
 	})
 
 	BeforeEach(func(ctx context.Context) {
