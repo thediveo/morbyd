@@ -135,6 +135,16 @@ func (c *Container) PID(ctx context.Context) (int, error) {
 	}
 }
 
+// Pause the container.
+func (c *Container) Pause(ctx context.Context) error {
+	return c.Session.moby.ContainerPause(ctx, c.ID)
+}
+
+// Unpause the container.
+func (c *Container) Unpause(ctx context.Context) error {
+	return c.Session.moby.ContainerUnpause(ctx, c.ID)
+}
+
 // Stop the container by sending it a termination signal. Default is SIGTERM,
 // unless changed using [run.WithStopSignal].
 func (c *Container) Stop(ctx context.Context) {
