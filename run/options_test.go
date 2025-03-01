@@ -112,6 +112,8 @@ var _ = Describe("run (container) options", func() {
 			WithPublishedPort("[fe80::dead:beef]:2345:1234"),
 			WithPublishedPort("127.0.0.1:1234"),
 			WithPublishedPort("127.0.0.2:12345/udp"),
+			WithCPUSet("1,3,5,99"),
+			WithMems("6,66"),
 			WithCustomInit(),
 		)
 
@@ -167,6 +169,8 @@ var _ = Describe("run (container) options", func() {
 			nat.Port("12345/udp"),
 			ConsistOf(nat.PortBinding{HostIP: "127.0.0.2", HostPort: "0"})))
 
+		Expect(o.Host.CpusetCpus).To(Equal("1,3,5,99"))
+		Expect(o.Host.CpusetMems).To(Equal("6,66"))
 		Expect(o.Host.Init).To(gstruct.PointTo(BeTrue()))
 
 		o = opts(WithLabel("foo=bar"))

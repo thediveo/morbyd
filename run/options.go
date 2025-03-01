@@ -632,6 +632,37 @@ func WithAllPortsPublished() Opt {
 	}
 }
 
+// WithCPUSet configures the [set of CPUs] on which processes of the container
+// are allowed to execute. The list of CPUs is a comma-separated list of CPU
+// numbers and ranges of numbers, where the numbers are decimal numbers. For
+// instance, “1,3,5”, "0-42,666", et cetera.
+//
+// To avoid stuttering this option is simply named “WithCPUSet” instead of
+// “WithCpusetCPUs”, or similar awkward letter salads.
+//
+// [set of CPUs]: https://man7.org/linux/man-pages/man7/cpuset.7.html
+func WithCPUSet(cpulist string) Opt {
+	return func(o *Options) error {
+		o.Host.CpusetCpus = cpulist
+		return nil
+	}
+}
+
+// WithMems configures the [set of memory nodes] on which processes of the
+// container are allowed to allocate memory. The list of memory nodes is a
+// comma-separated list of memory node numbers and ranges of numbers, where the
+// numbers are decimal numbers. For instance, “1,3,5”, "0-42,666", et cetera.
+//
+// [set of memory nodes]: https://man7.org/linux/man-pages/man7/cpuset.7.html
+func WithMems(memlist string) Opt {
+	return func(o *Options) error {
+		o.Host.CpusetMems = memlist
+		return nil
+	}
+}
+
+// WithCustomInit instructs Docker to run an init inside the container that
+// forwards signals and reaps processes.
 func WithCustomInit() Opt {
 	return func(o *Options) error {
 		customInit := true
