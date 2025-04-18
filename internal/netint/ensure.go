@@ -18,11 +18,11 @@ morbyd module, not littering the public API.
 */
 package netint
 
-import "github.com/docker/docker/api/types"
+import "github.com/docker/docker/api/types/network"
 
 // EnsureLabelsMap is a helper to ensure that the net.Options.Labels map is
 // initialized.
-func EnsureLabelsMap(o *types.NetworkCreate) {
+func EnsureLabelsMap(o *network.CreateOptions) {
 	if o.Labels != nil {
 		return
 	}
@@ -31,7 +31,7 @@ func EnsureLabelsMap(o *types.NetworkCreate) {
 
 // EnsureOptionsMap is a helper to ensure that the net.Options.Options map is
 // initialized.
-func EnsureOptionsMap(o *types.NetworkCreate) {
+func EnsureOptionsMap(o *network.CreateOptions) {
 	if o.Options != nil {
 		return
 	}

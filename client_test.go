@@ -131,25 +131,25 @@ func newWrappedClient(ctrl *mock.Controller, wrapped moby.Client, withouts []str
 
 	if !slices.Contains(withouts, "ContainerExecCreate") {
 		rec.ContainerExecCreate(Any, Any, Any).AnyTimes().
-			DoAndReturn(func(ctx context.Context, container string, config types.ExecConfig) (types.IDResponse, error) {
+			DoAndReturn(func(ctx context.Context, container string, config container.ExecOptions) (container.ExecCreateResponse, error) {
 				return wrapped.ContainerExecCreate(ctx, container, config)
 			})
 	}
 	if !slices.Contains(withouts, "ContainerExecStart") {
 		rec.ContainerExecStart(Any, Any, Any).AnyTimes().
-			DoAndReturn(func(ctx context.Context, execID string, config types.ExecStartCheck) error {
+			DoAndReturn(func(ctx context.Context, execID string, config container.ExecStartOptions) error {
 				return wrapped.ContainerExecStart(ctx, execID, config)
 			})
 	}
 	if !slices.Contains(withouts, "ContainerExecAttach") {
 		rec.ContainerExecAttach(Any, Any, Any).AnyTimes().
-			DoAndReturn(func(ctx context.Context, execID string, config types.ExecStartCheck) (types.HijackedResponse, error) {
+			DoAndReturn(func(ctx context.Context, execID string, config container.ExecAttachOptions) (types.HijackedResponse, error) {
 				return wrapped.ContainerExecAttach(ctx, execID, config)
 			})
 	}
 	if !slices.Contains(withouts, "ContainerExecInspect") {
 		rec.ContainerExecInspect(Any, Any).AnyTimes().
-			DoAndReturn(func(ctx context.Context, execID string) (types.ContainerExecInspect, error) {
+			DoAndReturn(func(ctx context.Context, execID string) (container.ExecInspect, error) {
 				return wrapped.ContainerExecInspect(ctx, execID)
 			})
 	}
@@ -193,19 +193,19 @@ func newWrappedClient(ctrl *mock.Controller, wrapped moby.Client, withouts []str
 
 	if !slices.Contains(withouts, "NetworkCreate") {
 		rec.NetworkCreate(Any, Any, Any).AnyTimes().
-			DoAndReturn(func(ctx context.Context, name string, options types.NetworkCreate) (types.NetworkCreateResponse, error) {
+			DoAndReturn(func(ctx context.Context, name string, options network.CreateOptions) (network.CreateResponse, error) {
 				return wrapped.NetworkCreate(ctx, name, options)
 			})
 	}
 	if !slices.Contains(withouts, "NetworkInspect") {
 		rec.NetworkInspect(Any, Any, Any).AnyTimes().
-			DoAndReturn(func(ctx context.Context, networkID string, options types.NetworkInspectOptions) (types.NetworkResource, error) {
+			DoAndReturn(func(ctx context.Context, networkID string, options network.InspectOptions) (network.Summary, error) {
 				return wrapped.NetworkInspect(ctx, networkID, options)
 			})
 	}
 	if !slices.Contains(withouts, "NetworkList") {
 		rec.NetworkList(Any, Any).AnyTimes().
-			DoAndReturn(func(ctx context.Context, options types.NetworkListOptions) ([]types.NetworkResource, error) {
+			DoAndReturn(func(ctx context.Context, options network.ListOptions) ([]network.Summary, error) {
 				return wrapped.NetworkList(ctx, options)
 			})
 	}
