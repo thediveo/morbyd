@@ -61,18 +61,18 @@ func (mr *MockClientMockRecorder) Close() *gomock.Call {
 }
 
 // ContainerAttach mocks base method.
-func (m *MockClient) ContainerAttach(ctx context.Context, container string, options container.AttachOptions) (types.HijackedResponse, error) {
+func (m *MockClient) ContainerAttach(ctx context.Context, arg1 string, options container.AttachOptions) (types.HijackedResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ContainerAttach", ctx, container, options)
+	ret := m.ctrl.Call(m, "ContainerAttach", ctx, arg1, options)
 	ret0, _ := ret[0].(types.HijackedResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ContainerAttach indicates an expected call of ContainerAttach.
-func (mr *MockClientMockRecorder) ContainerAttach(ctx, container, options any) *gomock.Call {
+func (mr *MockClientMockRecorder) ContainerAttach(ctx, arg1, options any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ContainerAttach", reflect.TypeOf((*MockClient)(nil).ContainerAttach), ctx, container, options)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ContainerAttach", reflect.TypeOf((*MockClient)(nil).ContainerAttach), ctx, arg1, options)
 }
 
 // ContainerCreate mocks base method.
@@ -91,7 +91,7 @@ func (mr *MockClientMockRecorder) ContainerCreate(ctx, config, hostConfig, netwo
 }
 
 // ContainerExecAttach mocks base method.
-func (m *MockClient) ContainerExecAttach(ctx context.Context, execID string, config container.ExecStartOptions) (types.HijackedResponse, error) {
+func (m *MockClient) ContainerExecAttach(ctx context.Context, execID string, config container.ExecAttachOptions) (types.HijackedResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ContainerExecAttach", ctx, execID, config)
 	ret0, _ := ret[0].(types.HijackedResponse)
@@ -106,18 +106,18 @@ func (mr *MockClientMockRecorder) ContainerExecAttach(ctx, execID, config any) *
 }
 
 // ContainerExecCreate mocks base method.
-func (m *MockClient) ContainerExecCreate(ctx context.Context, container string, config container.ExecOptions) (types.IDResponse, error) {
+func (m *MockClient) ContainerExecCreate(ctx context.Context, arg1 string, config container.ExecOptions) (container.ExecCreateResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ContainerExecCreate", ctx, container, config)
-	ret0, _ := ret[0].(types.IDResponse)
+	ret := m.ctrl.Call(m, "ContainerExecCreate", ctx, arg1, config)
+	ret0, _ := ret[0].(container.ExecCreateResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ContainerExecCreate indicates an expected call of ContainerExecCreate.
-func (mr *MockClientMockRecorder) ContainerExecCreate(ctx, container, config any) *gomock.Call {
+func (mr *MockClientMockRecorder) ContainerExecCreate(ctx, arg1, config any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ContainerExecCreate", reflect.TypeOf((*MockClient)(nil).ContainerExecCreate), ctx, container, config)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ContainerExecCreate", reflect.TypeOf((*MockClient)(nil).ContainerExecCreate), ctx, arg1, config)
 }
 
 // ContainerExecInspect mocks base method.
@@ -136,7 +136,7 @@ func (mr *MockClientMockRecorder) ContainerExecInspect(ctx, execID any) *gomock.
 }
 
 // ContainerExecStart mocks base method.
-func (m *MockClient) ContainerExecStart(ctx context.Context, execID string, config container.ExecStartOptions) error {
+func (m *MockClient) ContainerExecStart(ctx context.Context, execID string, config container.ExecAttachOptions) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ContainerExecStart", ctx, execID, config)
 	ret0, _ := ret[0].(error)
@@ -338,18 +338,18 @@ func (mr *MockClientMockRecorder) ImagePull(ctx, refStr, options any) *gomock.Ca
 }
 
 // ImagePush mocks base method.
-func (m *MockClient) ImagePush(ctx context.Context, image string, options image.PushOptions) (io.ReadCloser, error) {
+func (m *MockClient) ImagePush(ctx context.Context, arg1 string, options image.PushOptions) (io.ReadCloser, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ImagePush", ctx, image, options)
+	ret := m.ctrl.Call(m, "ImagePush", ctx, arg1, options)
 	ret0, _ := ret[0].(io.ReadCloser)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ImagePush indicates an expected call of ImagePush.
-func (mr *MockClientMockRecorder) ImagePush(ctx, image, options any) *gomock.Call {
+func (mr *MockClientMockRecorder) ImagePush(ctx, arg1, options any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ImagePush", reflect.TypeOf((*MockClient)(nil).ImagePush), ctx, image, options)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ImagePush", reflect.TypeOf((*MockClient)(nil).ImagePush), ctx, arg1, options)
 }
 
 // ImageRemove mocks base method.
@@ -397,10 +397,10 @@ func (mr *MockClientMockRecorder) NetworkCreate(ctx, name, options any) *gomock.
 }
 
 // NetworkInspect mocks base method.
-func (m *MockClient) NetworkInspect(ctx context.Context, networkID string, options network.InspectOptions) (network.Inspect, error) {
+func (m *MockClient) NetworkInspect(ctx context.Context, networkID string, options network.InspectOptions) (network.Summary, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "NetworkInspect", ctx, networkID, options)
-	ret0, _ := ret[0].(network.Inspect)
+	ret0, _ := ret[0].(network.Summary)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -412,10 +412,10 @@ func (mr *MockClientMockRecorder) NetworkInspect(ctx, networkID, options any) *g
 }
 
 // NetworkList mocks base method.
-func (m *MockClient) NetworkList(ctx context.Context, options network.ListOptions) ([]network.Inspect, error) {
+func (m *MockClient) NetworkList(ctx context.Context, options network.ListOptions) ([]network.Summary, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "NetworkList", ctx, options)
-	ret0, _ := ret[0].([]network.Inspect)
+	ret0, _ := ret[0].([]network.Summary)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
