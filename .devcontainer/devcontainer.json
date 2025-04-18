@@ -30,6 +30,7 @@
         "GOPATH": "/home/vscode/go",
         "PATH": "/home/vscode/go/bin:/go/bin:/usr/local/go/bin:${localEnv:PATH}"
     },
+    "postCreateCommand": "go install go.uber.org/mock/mockgen@latest",
     "customizations": {
         "vscode": {
             "extensions": [
