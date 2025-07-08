@@ -21,7 +21,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/go-connections/nat"
@@ -45,7 +44,7 @@ type Container struct {
 	Name    string
 	ID      string
 	Session *Session
-	Details types.ContainerJSON // inspection information after start.
+	Details container.InspectResponse // inspection information after start.
 }
 
 // Refresh the details about this container, or return an error in case
@@ -220,4 +219,13 @@ func (c *Container) PublishedPort(portproto string) Addrs {
 		addrs = append(addrs, NewAddr(ip, uint16(port), l4proto))
 	}
 	return addrs
+}
+
+// Rename this container to the passed-in new name.
+func (c *Container) Rename(ctx context.Context, newname string) error {
+	err := c.Session.moby.ContainerRename(ctx, c.ID, newname)
+	if err != nil {
+		return err
+	}
+	return c.Refresh(ctx)
 }
