@@ -153,4 +153,16 @@ var _ = Describe("containers", Ordered, func() {
 		Expect(cntr.Wait(ctx)).Error().To(MatchError(ContainSubstring("waiting for container")))
 
 	})
+
+	It("renames a container", func(ctx context.Context) {
+		cntr := Successful(sess.Run(ctx, "busybox",
+			run.WithAutoRemove(),
+			run.WithName("test_foo"),
+			run.WithCommand("/bin/sh", "-c", "trap 'exit 1' TERM; while true; do sleep 1; done")))
+		Expect(cntr.PID(ctx)).Error().NotTo(HaveOccurred())
+		Expect(cntr.Rename(ctx, "test_bar")).To(Succeed())
+		Expect(cntr.Details.Name).To(Equal("/test_bar"))
+		cntr.Kill(ctx)
+	})
+
 })
