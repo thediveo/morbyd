@@ -5,7 +5,7 @@ go 1.23.8
 toolchain go1.24.2
 
 require (
-	github.com/docker/docker v28.3.1+incompatible
+	github.com/docker/docker v28.3.3+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/docker/go-units v0.5.0
 	github.com/moby/patternmatcher v0.6.0
