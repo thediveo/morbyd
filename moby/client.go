@@ -23,6 +23,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/network"
+	dockerclient "github.com/docker/docker/client"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
@@ -57,6 +58,7 @@ type Client interface {
 	ContainerExecInspect(ctx context.Context, execID string) (container.ExecInspect, error)
 
 	ImageBuild(ctx context.Context, buildContext io.Reader, options build.ImageBuildOptions) (build.ImageBuildResponse, error)
+	ImageInspect(ctx context.Context, imageID string, inspectOpts ...dockerclient.ImageInspectOption) (image.InspectResponse, error)
 	ImageList(ctx context.Context, options image.ListOptions) ([]image.Summary, error)
 	ImagePull(ctx context.Context, refStr string, options image.PullOptions) (io.ReadCloser, error)
 	ImagePush(ctx context.Context, image string, options image.PushOptions) (io.ReadCloser, error)

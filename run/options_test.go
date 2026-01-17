@@ -240,9 +240,9 @@ var _ = Describe("run (container) options", func() {
 		Expect(bindVolumeToBind("")).To(BeEmpty())
 
 		cwd := Successful(os.Getwd())
-		defer os.Chdir(cwd) //nolint:golint,errcheck
+		defer os.Chdir(cwd) //nolint:errcheck // any error is irrelevant at this point
 		tmpdir := Successful(os.MkdirTemp("", "on-my-way-out-*"))
-		defer os.RemoveAll(tmpdir) //nolint:golint,errcheck
+		defer os.RemoveAll(tmpdir) //nolint:errcheck // any error is irrelevant at this point
 		Expect(os.Chdir(tmpdir)).To(Succeed())
 		Expect(os.RemoveAll(tmpdir)).To(Succeed())
 		Expect(bindVolumeToBind("./relative:/absolute")).To(Equal("./relative:/absolute"))

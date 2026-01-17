@@ -22,9 +22,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/pkg/archive"
+	dockerbuild "github.com/docker/docker/api/types/build"
 	"github.com/docker/docker/pkg/jsonmessage"
+	"github.com/moby/go-archive"
 	"github.com/moby/patternmatcher/ignorefile"
 	"github.com/thediveo/morbyd/build"
 )
@@ -46,7 +46,7 @@ import (
 // any output (such as build steps, et cetera) will simply be discarded.
 func (s *Session) BuildImage(ctx context.Context, buildctxpath string, opts ...build.Opt) (id string, err error) {
 	bios := build.Options{
-		ImageBuildOptions: types.ImageBuildOptions{
+		ImageBuildOptions: dockerbuild.ImageBuildOptions{
 			Dockerfile:  "Dockerfile",
 			Remove:      true,
 			ForceRemove: true,
@@ -79,7 +79,7 @@ func (s *Session) BuildImage(ctx context.Context, buildctxpath string, opts ...b
 	if err != nil {
 		return "", fmt.Errorf("image build failed, reason: %w", err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // any error is irrelevant at this point
 	// https://stackoverflow.com/a/48579861 pointing to:
 	// https://pkg.go.dev/github.com/moby/moby/pkg/jsonmessage?utm_source=godoc#DisplayJSONMessagesStream
 	err = jsonmessage.DisplayJSONMessagesStream(resp.Body,
@@ -108,7 +108,7 @@ func readIgnorePatterns(name string) []string {
 	if err != nil {
 		return nil
 	}
-	defer f.Close()
+	defer f.Close() //nolint:errcheck // any error is irrelevant at this point
 	patterns, err := ignorefile.ReadAll(f)
 	if err != nil {
 		return nil

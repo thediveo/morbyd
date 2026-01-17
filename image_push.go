@@ -38,7 +38,7 @@ func (s *Session) PushImage(ctx context.Context, image string, opts ...push.Opt)
 	if err != nil {
 		return fmt.Errorf("image push failed, reason: %w", err)
 	}
-	defer r.Close()
+	defer r.Close() //nolint:errcheck // any error is irrelevant at this point
 	err = jsonmessage.DisplayJSONMessagesStream(r, popts.Out, 0, false, nil)
 	return err
 }

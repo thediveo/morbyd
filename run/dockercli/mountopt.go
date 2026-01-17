@@ -3,6 +3,7 @@
 // Apache License 2.0, https://github.com/docker/cli/blob/master/LICENSE
 //
 // Removed: logrus dependency
+
 package dockercli
 
 import (

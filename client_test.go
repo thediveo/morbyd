@@ -23,9 +23,11 @@ import (
 	"slices"
 
 	"github.com/docker/docker/api/types"
+	build "github.com/docker/docker/api/types/build"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/network"
+	dockerclient "github.com/docker/docker/client"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/thediveo/morbyd/moby"
 	"github.com/thediveo/morbyd/session"
@@ -162,8 +164,14 @@ func newWrappedClient(ctrl *mock.Controller, wrapped moby.Client, withouts []str
 
 	if !slices.Contains(withouts, "ImageBuild") {
 		rec.ImageBuild(Any, Any, Any).AnyTimes().
-			DoAndReturn(func(ctx context.Context, buildContext io.Reader, options types.ImageBuildOptions) (types.ImageBuildResponse, error) {
+			DoAndReturn(func(ctx context.Context, buildContext io.Reader, options build.ImageBuildOptions) (build.ImageBuildResponse, error) {
 				return wrapped.ImageBuild(ctx, buildContext, options)
+			})
+	}
+	if !slices.Contains(withouts, "ImageInspect") {
+		rec.ImageInspect(Any, Any, Any).AnyTimes().
+			DoAndReturn(func(ctx context.Context, imageID string, inspectOpts ...dockerclient.ImageInspectOption) (image.InspectResponse, error) {
+				return wrapped.ImageInspect(ctx, imageID, inspectOpts...)
 			})
 	}
 	if !slices.Contains(withouts, "ImageList") {

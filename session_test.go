@@ -48,11 +48,11 @@ var _ = Describe("test sessions", func() {
 
 	It("reports an error when the client cannot be created", func(ctx context.Context) {
 		origdockerhost := os.Getenv(client.EnvOverrideHost)
-		defer os.Setenv(client.EnvOverrideHost, origdockerhost)
+		defer os.Setenv(client.EnvOverrideHost, origdockerhost) //nolint:errcheck // any error is irrelevant at this point
 		// There really aren't that many ways to trigger an error when creating
 		// a Docker host, but overriding the host with an invalid protocol URL
 		// is a rare option...
-		os.Setenv(client.EnvOverrideHost, "lalala://")
+		os.Setenv(client.EnvOverrideHost, "lalala://") //nolint:errcheck // any error is irrelevant at this point
 		Expect(NewSession(ctx)).Error().To(HaveOccurred())
 	})
 

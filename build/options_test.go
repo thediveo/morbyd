@@ -17,8 +17,7 @@ package build
 import (
 	"io"
 
-	"github.com/docker/docker/api/types"
-
+	"github.com/docker/docker/api/types/build"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gs "github.com/onsi/gomega/gstruct"
@@ -69,7 +68,7 @@ var _ = Describe("image build options", func() {
 		Expect(bios.Squash).To(BeTrue())
 		Expect(bios.Out).To(BeIdenticalTo(io.Discard))
 
-		Expect(WithOpts(types.ImageBuildOptions{})(&bios)).NotTo(HaveOccurred())
+		Expect(WithOpts(build.ImageBuildOptions{})(&bios)).NotTo(HaveOccurred())
 		Expect(bios.Dockerfile).To(BeEmpty())
 		Expect(bios.Out).To(BeIdenticalTo(io.Discard))
 	})

@@ -23,7 +23,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/thediveo/morbyd/run"
 	"github.com/thediveo/morbyd/session"
@@ -66,7 +66,7 @@ var _ = Describe("getting container IPs", Ordered, func() {
 			http.MethodGet, fmt.Sprintf("http://%s/", ip), nil))
 		clnt := &http.Client{Timeout: 5 * time.Second}
 		resp := Successful(clnt.Do(get))
-		defer resp.Body.Close()
+		defer resp.Body.Close() //nolint:errcheck // any error is irrelevant at this point
 		body := Successful(io.ReadAll(resp.Body))
 		Expect(string(body)).To(Equal("Hellorld!\n"))
 	})
@@ -88,8 +88,8 @@ var _ = Describe("getting container IPs", Ordered, func() {
 
 		cntr := &Container{
 			Session: sess,
-			Details: types.ContainerJSON{
-				NetworkSettings: &types.NetworkSettings{
+			Details: container.InspectResponse{
+				NetworkSettings: &container.NetworkSettings{
 					Networks: map[string]*network.EndpointSettings{
 						"mac-wie-lahm": {
 							NetworkID: "mac-wie-lahm",
@@ -117,8 +117,8 @@ var _ = Describe("getting container IPs", Ordered, func() {
 
 		cntr := &Container{
 			Session: sess,
-			Details: types.ContainerJSON{
-				NetworkSettings: &types.NetworkSettings{
+			Details: container.InspectResponse{
+				NetworkSettings: &container.NetworkSettings{
 					Networks: map[string]*network.EndpointSettings{
 						"bridge-over-troubled-data": {
 							NetworkID: "bridge-over-troubled-data",
@@ -151,8 +151,8 @@ var _ = Describe("getting container IPs", Ordered, func() {
 
 		cntr := &Container{
 			Session: sess,
-			Details: types.ContainerJSON{
-				NetworkSettings: &types.NetworkSettings{
+			Details: container.InspectResponse{
+				NetworkSettings: &container.NetworkSettings{
 					Networks: map[string]*network.EndpointSettings{
 						"none": {
 							NetworkID: "bubble",
@@ -186,8 +186,8 @@ var _ = Describe("getting container IPs", Ordered, func() {
 
 		cntr := &Container{
 			Session: sess,
-			Details: types.ContainerJSON{
-				NetworkSettings: &types.NetworkSettings{
+			Details: container.InspectResponse{
+				NetworkSettings: &container.NetworkSettings{
 					Networks: map[string]*network.EndpointSettings{
 						"host": {
 							NetworkID: "horscht",
@@ -217,8 +217,8 @@ var _ = Describe("getting container IPs", Ordered, func() {
 
 		cntr := &Container{
 			Session: sess,
-			Details: types.ContainerJSON{
-				NetworkSettings: &types.NetworkSettings{
+			Details: container.InspectResponse{
+				NetworkSettings: &container.NetworkSettings{
 					Networks: map[string]*network.EndpointSettings{
 						"bubble": {
 							NetworkID: "bubble",

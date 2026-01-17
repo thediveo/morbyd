@@ -15,7 +15,7 @@
 package morbyd
 
 import (
-	"github.com/docker/docker/client"
+	"github.com/containerd/errdefs"
 
 	"github.com/onsi/gomega/gcustom"
 	"github.com/onsi/gomega/types"
@@ -25,12 +25,12 @@ import (
 // (resource) “not found” error.
 func HaventFoundContainer() types.GomegaMatcher {
 	return gcustom.MakeMatcher(
-		func(err error) (bool, error) { return client.IsErrNotFound(err), nil })
+		func(err error) (bool, error) { return errdefs.IsNotFound(err), nil })
 }
 
 // HaventFoundNetwork returns a Gomega matcher that matches Docker's
 // (resource) “not found” error.
 func HaventFoundNetwork() types.GomegaMatcher {
 	return gcustom.MakeMatcher(
-		func(err error) (bool, error) { return client.IsErrNotFound(err), nil })
+		func(err error) (bool, error) { return errdefs.IsNotFound(err), nil })
 }

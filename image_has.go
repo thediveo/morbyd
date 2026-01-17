@@ -18,18 +18,18 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/docker/docker/api/types/filters"
-	"github.com/docker/docker/api/types/image"
+	"github.com/containerd/errdefs"
 )
 
 // HasImage returns true if the image referenced by imageref is locally
 // available, otherwise false.
 func (s *Session) HasImage(ctx context.Context, imageref string) (bool, error) {
-	matchingimgs, err := s.moby.ImageList(ctx, image.ListOptions{
-		Filters: filters.NewArgs(filters.KeyValuePair{Key: "reference", Value: imageref}),
-	})
+	_, err := s.moby.ImageInspect(ctx, imageref)
 	if err != nil {
-		return false, fmt.Errorf("cannot list container images with a filter, reason: %w", err)
+		if errdefs.IsNotFound(err) {
+			return false, nil
+		}
+		return false, fmt.Errorf("image inspection failed, reason: %w", err)
 	}
-	return len(matchingimgs) == 1, nil
+	return true, nil
 }
