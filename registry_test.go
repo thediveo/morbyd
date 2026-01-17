@@ -68,9 +68,9 @@ var _ = Describe("given a (local) registry", Ordered, Serial, func() {
 		tmpDir := Successful(os.MkdirTemp("", "registry-silly-*"))
 		DeferCleanup(os.RemoveAll, tmpDir)
 		htpasswdPath := filepath.Join(tmpDir, "htpasswd")
-		os.WriteFile(htpasswdPath,
+		Expect(os.WriteFile(htpasswdPath,
 			fmt.Appendf(nil, "%s:%s\n", user, hash),
-			0644)
+			0644)).To(Succeed())
 
 		By("starting a local container registry")
 		Expect(sess.Run(ctx, "registry:3",
@@ -92,7 +92,7 @@ var _ = Describe("given a (local) registry", Ordered, Serial, func() {
 			if err != nil {
 				return err
 			}
-			defer resp.Body.Close()
+			defer resp.Body.Close() //nolint:errcheck // any error is irrelevant at this point
 			if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusUnauthorized {
 				return fmt.Errorf("HTTP status code %d", resp.StatusCode)
 			}

@@ -18,6 +18,7 @@ import (
 	"io"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/build"
 	lbls "github.com/thediveo/morbyd/labels"
 )
 
@@ -172,7 +173,7 @@ func WithOutput(w io.Writer) Opt {
 // WithOpts (re)sets all image build options to the specified settings at once,
 // with the sole exception of an optional output writer for image build process
 // output (that needs to set independently using WithImageBuildOutput).
-func WithOpts(opts types.ImageBuildOptions) Opt {
+func WithOpts(opts build.ImageBuildOptions) Opt {
 	return func(o *Options) error {
 		o.ImageBuildOptions = opts
 		return nil

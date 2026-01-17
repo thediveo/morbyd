@@ -21,9 +21,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/docker/docker/api/types"
+	dockerbuild "github.com/docker/docker/api/types/build"
 	image "github.com/docker/docker/api/types/image"
 	"github.com/thediveo/morbyd/build"
+	"github.com/thediveo/morbyd/run"
 	"github.com/thediveo/morbyd/session"
 	mock "go.uber.org/mock/gomock"
 
@@ -88,8 +89,7 @@ var _ = Describe("build image", Ordered, func() {
 				sess.Close(ctx)
 				Eventually(Goroutines).Within(2 * time.Second).ProbeEvery(250 * time.Millisecond).
 					ShouldNot(HaveLeaked(goodgos))
-				Eventually(Filedescriptors).Within(2 * time.Second).ProbeEvery(250 * time.Millisecond).
-					ShouldNot(HaveLeakedFds(goodfds))
+				Expect(Filedescriptors()).ShouldNot(HaveLeakedFds(goodfds))
 			})
 		})
 
@@ -106,6 +106,7 @@ var _ = Describe("build image", Ordered, func() {
 			var buff bytes.Buffer
 			id := Successful(sess.BuildImage(ctx, "_test/buzzybocks",
 				build.WithTag(imageref),
+				build.WithoutCache(),
 				build.WithBuildArg("HELLO=WORLD"),
 				build.WithOutput(io.MultiWriter(GinkgoWriter, &buff)),
 			))
@@ -151,6 +152,17 @@ var _ = Describe("build image", Ordered, func() {
 			Expect(id).To(BeEmpty())
 		})
 
+		It("builds an image and then runs it using the image ID", func(ctx context.Context) {
+			imgid := Successful(sess.BuildImage(ctx, "./_test/buzzybocks",
+				build.WithBuildArg("HELLO=WORLD"),
+				build.WithOutput(GinkgoWriter)))
+			Expect(imgid).To(HavePrefix("sha256:"))
+			Expect(sess.Run(ctx, imgid,
+				run.WithCombinedOutput(GinkgoWriter),
+				run.WithAutoRemove()),
+			).Error().NotTo(HaveOccurred())
+		})
+
 	})
 
 	It("skips invalid aux messages", func(ctx context.Context) {
@@ -167,7 +179,7 @@ var _ = Describe("build image", Ordered, func() {
 {"aux":{"ID":""}}
 {"aux":{"ID":42}}
 `))
-		rec.ImageBuild(Any, Any, Any).Return(types.ImageBuildResponse{Body: rc}, nil)
+		rec.ImageBuild(Any, Any, Any).Return(dockerbuild.ImageBuildResponse{Body: rc}, nil)
 
 		Expect(sess.BuildImage(ctx, "./_test/dockerignore")).To(Equal("foobar"))
 	})

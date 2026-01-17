@@ -21,6 +21,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/containerd/errdefs"
 	types "github.com/docker/docker/api/types"
 	container "github.com/docker/docker/api/types/container"
 	image "github.com/docker/docker/api/types/image"
@@ -63,13 +64,13 @@ var _ = Describe("run container", Ordered, func() {
 		It("reports failing image pulls", func(ctx context.Context) {
 			ctrl := mock.NewController(GinkgoT())
 			sess := Successful(NewSession(ctx,
-				WithMockController(ctrl, "ImageList", "ImagePull")))
+				WithMockController(ctrl, "ImageInspect", "ImagePull")))
 			DeferCleanup(func(ctx context.Context) {
 				sess.Close(ctx)
 			})
 			rec := sess.Client().(*MockClient).EXPECT()
 
-			rec.ImageList(Any, Any).Return([]image.Summary{}, nil)
+			rec.ImageInspect(Any, Any).Return(image.InspectResponse{}, errdefs.ErrNotFound)
 			rec.ImagePull(Any, Any, Any).Return(nil, errors.New("error IJK305I"))
 
 			Expect(sess.Run(ctx, "busybox")).Error().To(MatchError(ContainSubstring("cannot pull image")))
@@ -137,7 +138,7 @@ var _ = Describe("run container", Ordered, func() {
 			})
 			rec := sess.Client().(*MockClient).EXPECT()
 
-			rec.ContainerInspect(Any, Any).Return(types.ContainerJSON{}, errors.New("error IJK305I"))
+			rec.ContainerInspect(Any, Any).Return(container.InspectResponse{}, errors.New("error IJK305I"))
 
 			Expect(sess.Run(ctx, "busybox", run.WithName(canaryName))).Error().To(MatchError(ContainSubstring("cannot inspect newly started container")))
 		})

@@ -21,6 +21,7 @@ import (
 	"time"
 
 	types "github.com/docker/docker/api/types"
+	container "github.com/docker/docker/api/types/container"
 	"github.com/thediveo/morbyd/exec"
 	"github.com/thediveo/morbyd/run"
 	"github.com/thediveo/morbyd/safe"
@@ -123,8 +124,8 @@ var _ = Describe("execute command inside container", Ordered, func() {
 
 			By("executing a command inside the container")
 			r, w := io.Pipe()
-			defer w.Close()
-			defer r.Close()
+			defer w.Close() //nolint:errcheck // any error is irrelevant at this point
+			defer r.Close() //nolint:errcheck // any error is irrelevant at this point
 			execcmd := Successful(cntr.Exec(ctx,
 				exec.Command("sh", "-c", "echo \"exec command started\"; read -s input; echo $input; echo \"exec command finished\"; exit 42"),
 				exec.WithInput(r),
@@ -136,7 +137,7 @@ var _ = Describe("execute command inside container", Ordered, func() {
 
 			By("sending input to the executing command and closing writing end of input")
 			Expect(w.Write([]byte("!\n"))).Error().NotTo(HaveOccurred())
-			w.Close()
+			w.Close() //nolint:errcheck // any error is irrelevant at this point
 
 			By("waiting for exit code")
 			waitctx, cancel := context.WithTimeout(ctx, 10*time.Second)
@@ -165,8 +166,8 @@ var _ = Describe("execute command inside container", Ordered, func() {
 			})
 			rec := sess.Client().(*MockClient).EXPECT()
 
-			rec.ContainerInspect(Any, Any).Return(types.ContainerJSON{}, nil)
-			rec.ContainerExecCreate(Any, Any, Any).Return(types.IDResponse{}, errors.New("error IJK305I"))
+			rec.ContainerInspect(Any, Any).Return(container.InspectResponse{}, nil)
+			rec.ContainerExecCreate(Any, Any, Any).Return(container.ExecCreateResponse{}, errors.New("error IJK305I"))
 
 			cntr := &Container{
 				Session: sess,
@@ -184,8 +185,8 @@ var _ = Describe("execute command inside container", Ordered, func() {
 			})
 			rec := sess.Client().(*MockClient).EXPECT()
 
-			rec.ContainerInspect(Any, Any).Return(types.ContainerJSON{}, nil)
-			rec.ContainerExecCreate(Any, Any, Any).Return(types.IDResponse{ID: "42"}, nil)
+			rec.ContainerInspect(Any, Any).Return(container.InspectResponse{}, nil)
+			rec.ContainerExecCreate(Any, Any, Any).Return(container.ExecCreateResponse{ID: "42"}, nil)
 			rec.ContainerExecAttach(Any, Any, Any).Return(types.HijackedResponse{}, errors.New("error IJK305I"))
 
 			cntr := &Container{

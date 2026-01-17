@@ -80,7 +80,7 @@ func ExampleContainer_PublishedPort() {
 	if resp.StatusCode != http.StatusOK {
 		panic(resp.StatusCode)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // any error is irrelevant at this point
 	phrase, err := io.ReadAll(resp.Body)
 	if err != nil {
 		panic(err)

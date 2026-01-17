@@ -21,7 +21,6 @@ import (
 	"math/rand"
 	"time"
 
-	types "github.com/docker/docker/api/types"
 	container "github.com/docker/docker/api/types/container"
 	"github.com/thediveo/morbyd/run"
 	"github.com/thediveo/morbyd/safe"
@@ -126,7 +125,7 @@ var _ = Describe("containers", Ordered, func() {
 		})
 		rec := sess.Client().(*MockClient).EXPECT()
 
-		rec.ContainerInspect(Any, Any).Return(types.ContainerJSON{}, errors.New("error IJK305I"))
+		rec.ContainerInspect(Any, Any).Return(container.InspectResponse{}, errors.New("error IJK305I"))
 
 		cntr := &Container{Session: sess, ID: "bad1dea"}
 		Expect(cntr.Refresh(ctx)).Error().To(MatchError(ContainSubstring("cannot refresh details of container")))

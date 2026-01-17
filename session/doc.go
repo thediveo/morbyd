@@ -1,4 +1,4 @@
 /*
-Package sess provides options for creating (test) sessions.
+Package session provides options for creating (test) sessions.
 */
 package session

@@ -5,15 +5,16 @@
 		}
 	],
 	"settings": {
-		"go.lintTool": "golangci-lint",
+		"go.lintTool": "golangci-lint-v2",
 		"go.testTimeout": "300s",
 		"go.testFlags": [
 			"-v",
 			"-race",
-			"--ginkgo.no-color"
 		],
 		"statsBar.memoUsage.format": "$(chip) ${used}/${total} ${unit}, ${percent}%",
 		"statsBar.location": "Right",
+		"go.testTags": "",
+		"go.lintOnSave": "workspace",
 	},
 	"launch": {
 		"version": "0.2.0",

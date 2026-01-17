@@ -76,7 +76,7 @@ var _ = Describe("published container ports", Ordered, func() {
 			Successful(http.NewRequest(
 				http.MethodGet, "http://"+svcAddrPort+"/", nil)).WithContext(ctx)))
 		Expect(resp.StatusCode).To(Equal(http.StatusOK))
-		defer resp.Body.Close()
+		defer resp.Body.Close() //nolint:errcheck // any error is irrelevant at this point
 		Expect(string(Successful(io.ReadAll(resp.Body)))).To(Equal("DOH!\n"))
 	})
 

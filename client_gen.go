@@ -15,6 +15,6 @@
 // Use mockgen in source mode because our Moby client interface definition is
 // for testing only, and mockgen cannot see it in "reflect mode".
 
-//go:generate mockgen -destination client_mock_test.go -package morbyd github.com/thediveo/morbyd/moby Client
+//go:generate mockgen -write_package_comment=false -destination client_mock_test.go -package morbyd github.com/thediveo/morbyd/moby Client
 
 package morbyd

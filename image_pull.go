@@ -34,7 +34,9 @@ import (
 func (s *Session) PullImage(ctx context.Context, imgref string, opts ...pull.Opt) error {
 	pios := pull.Options{}
 	for _, opt := range opts {
-		opt(&pios)
+		if err := opt(&pios); err != nil {
+			return err
+		}
 	}
 	if pios.Out == nil {
 		pios.Out = io.Discard
@@ -43,7 +45,7 @@ func (s *Session) PullImage(ctx context.Context, imgref string, opts ...pull.Opt
 	if err != nil {
 		return fmt.Errorf("image pull failed, reason: %w", err)
 	}
-	defer r.Close()
+	defer r.Close() //nolint:errcheck // any error is irrelevant at this point
 	err = jsonmessage.DisplayJSONMessagesStream(r, pios.Out, 0, false, nil)
 	return err
 }

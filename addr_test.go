@@ -59,7 +59,7 @@ var _ = Describe("addresses", func() {
 				NewAddr(net.ParseIP("0.0.0.0"), 1234, "tcp"),
 				NewAddr(net.ParseIP("127.0.0.1"), 4567, "tcp"),
 			}
-			for i := 0; i < 10; i++ {
+			for range 10 {
 				Expect(addrs.First().String()).To(Equal("[::]:1234"))
 			}
 		})
@@ -71,7 +71,7 @@ var _ = Describe("addresses", func() {
 				NewAddr(net.ParseIP("127.0.0.1"), 4567, "tcp"),
 			}
 			counts := map[string]int{}
-			for i := 0; i < 100; i++ {
+			for range 100 {
 				a := addrs.Any().String()
 				counts[a] = counts[a] + 1
 			}

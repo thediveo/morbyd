@@ -76,7 +76,7 @@ func (s *Session) Client() moby.Client { return s.moby }
 // enabled, and then closes idle HTTP connections to the Docker daemon.
 func (s *Session) Close(ctx context.Context) {
 	s.AutoClean(ctx)
-	s.moby.Close()
+	s.moby.Close() //nolint:errcheck // any error is irrelevant at this point
 }
 
 // AutoClean forcefully removes all left-over containers and networks that are

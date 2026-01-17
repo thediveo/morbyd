@@ -19,7 +19,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/thediveo/morbyd/run"
 	"github.com/thediveo/morbyd/session"
 	mock "go.uber.org/mock/gomock"
@@ -49,12 +49,12 @@ var _ = Describe("getting container PIDs", Ordered, func() {
 			})
 			rec := sess.Client().(*MockClient).EXPECT()
 
-			rec.ContainerInspect(Any, Any).Return(types.ContainerJSON{
-				ContainerJSONBase: &types.ContainerJSONBase{},
+			rec.ContainerInspect(Any, Any).Return(container.InspectResponse{
+				ContainerJSONBase: &container.ContainerJSONBase{},
 			}, nil)
-			rec.ContainerInspect(Any, Any).Return(types.ContainerJSON{
-				ContainerJSONBase: &types.ContainerJSONBase{
-					State: &types.ContainerState{
+			rec.ContainerInspect(Any, Any).Return(container.InspectResponse{
+				ContainerJSONBase: &container.ContainerJSONBase{
+					State: &container.State{
 						Pid: 42,
 					},
 				},
@@ -73,17 +73,17 @@ var _ = Describe("getting container PIDs", Ordered, func() {
 			})
 			rec := sess.Client().(*MockClient).EXPECT()
 
-			rec.ContainerInspect(Any, Any).Return(types.ContainerJSON{
-				ContainerJSONBase: &types.ContainerJSONBase{
-					State: &types.ContainerState{
+			rec.ContainerInspect(Any, Any).Return(container.InspectResponse{
+				ContainerJSONBase: &container.ContainerJSONBase{
+					State: &container.State{
 						Dead:       true,
 						Restarting: true,
 					},
 				},
 			}, nil)
-			rec.ContainerInspect(Any, Any).Return(types.ContainerJSON{
-				ContainerJSONBase: &types.ContainerJSONBase{
-					State: &types.ContainerState{
+			rec.ContainerInspect(Any, Any).Return(container.InspectResponse{
+				ContainerJSONBase: &container.ContainerJSONBase{
+					State: &container.State{
 						Pid: 42,
 					},
 				},
@@ -102,12 +102,12 @@ var _ = Describe("getting container PIDs", Ordered, func() {
 			})
 			rec := sess.Client().(*MockClient).EXPECT()
 
-			rec.ContainerInspect(Any, Any).Return(types.ContainerJSON{
-				ContainerJSONBase: &types.ContainerJSONBase{},
+			rec.ContainerInspect(Any, Any).Return(container.InspectResponse{
+				ContainerJSONBase: &container.ContainerJSONBase{},
 			}, nil)
-			rec.ContainerInspect(Any, Any).Return(types.ContainerJSON{
-				ContainerJSONBase: &types.ContainerJSONBase{
-					State: &types.ContainerState{
+			rec.ContainerInspect(Any, Any).Return(container.InspectResponse{
+				ContainerJSONBase: &container.ContainerJSONBase{
+					State: &container.State{
 						OOMKilled: true,
 					},
 				},
@@ -126,7 +126,7 @@ var _ = Describe("getting container PIDs", Ordered, func() {
 			})
 			rec := sess.Client().(*MockClient).EXPECT()
 
-			rec.ContainerInspect(Any, Any).Return(types.ContainerJSON{}, errors.New("error IJK305I"))
+			rec.ContainerInspect(Any, Any).Return(container.InspectResponse{}, errors.New("error IJK305I"))
 
 			cntr := &Container{Session: sess, ID: "bad1dea"}
 			Expect(cntr.PID(ctx)).Error().To(HaveOccurred())
@@ -142,8 +142,8 @@ var _ = Describe("getting container PIDs", Ordered, func() {
 			rec := sess.Client().(*MockClient).EXPECT()
 
 			// Ignore the cancelled context so we can get to the short nap attack.
-			rec.ContainerInspect(Any, Any).Return(types.ContainerJSON{
-				ContainerJSONBase: &types.ContainerJSONBase{},
+			rec.ContainerInspect(Any, Any).Return(container.InspectResponse{
+				ContainerJSONBase: &container.ContainerJSONBase{},
 			}, nil)
 			ctx, cancel := context.WithCancel(ctx)
 			cancel()
