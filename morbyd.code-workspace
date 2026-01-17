@@ -16,23 +16,34 @@
 		"go.testTags": "",
 		"go.lintOnSave": "workspace",
 	},
-	"launch": {
-		"version": "0.2.0",
-		"configurations": [
-			{
-				"name": "Debug/Test Package",
-				"type": "go",
-				"request": "launch",
-				"mode": "auto",
-				"program": "${fileDirname}"
-			}
-		],
-		"compounds": []
-	},
 	"extensions": {
 		"recommendations": [
 			"ms-vscode.live-server",
 			"njzy.stats-bar"
+		]
+	},
+	"launch": {
+		"version": "0.2.0",
+		"configurations": [
+			{
+				"name": "Launch tests",
+				"type": "go",
+				"request": "launch",
+				"mode": "test",
+				"program": "${workspaceFolder}",
+				"args": [
+				]
+			},
+			{
+				"name": "Launch tests verbose",
+				"type": "go",
+				"request": "launch",
+				"mode": "test",
+				"program": "${workspaceFolder}",
+				"args": [
+					"-ginkgo.v"
+				]
+			}
 		]
 	}
 }
