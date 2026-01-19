@@ -24,9 +24,11 @@ import (
 
 	dockerbuild "github.com/docker/docker/api/types/build"
 	"github.com/docker/docker/pkg/jsonmessage"
+	bkcontrol "github.com/moby/buildkit/api/services/control"
 	"github.com/moby/go-archive"
 	"github.com/moby/patternmatcher/ignorefile"
 	"github.com/thediveo/morbyd/build"
+	"google.golang.org/protobuf/proto"
 )
 
 // BuildImage builds a container image using the specified build context and
@@ -44,6 +46,8 @@ import (
 //
 // If no build process output writer has been specified using [build.WithOutput]
 // any output (such as build steps, et cetera) will simply be discarded.
+//
+// Use [build.WithBuildKit] to build the image with buildkit.
 func (s *Session) BuildImage(ctx context.Context, buildctxpath string, opts ...build.Opt) (id string, err error) {
 	bios := build.Options{
 		ImageBuildOptions: dockerbuild.ImageBuildOptions{
@@ -85,6 +89,33 @@ func (s *Session) BuildImage(ctx context.Context, buildctxpath string, opts ...b
 	err = jsonmessage.DisplayJSONMessagesStream(resp.Body,
 		bios.Out, 0, false,
 		func(auxmsg jsonmessage.JSONMessage) {
+			// buildkit messages are rather complex in that they are
+			// protobuf-encoded and transmitted as aux messages with their
+			// dedicated buildkit aux message ID. See also:
+			// https://github.com/moby/moby/discussions/43788#discussioncomment-13291612
+			if auxmsg.ID == "moby.buildkit.trace" {
+				if auxmsg.Aux == nil {
+					return
+				}
+				var bkpbmsg []byte
+				if err := json.Unmarshal(*auxmsg.Aux, &bkpbmsg); err != nil {
+					return
+				}
+				var status bkcontrol.StatusResponse
+				if err := proto.Unmarshal(bkpbmsg, &status); err != nil {
+					return
+				}
+				for _, status := range status.Statuses {
+					_, _ = fmt.Fprintf(bios.Out, "STATUS: %s\n", status)
+				}
+				for _, log := range status.Logs {
+					_, _ = fmt.Fprintf(bios.Out, "LOG: %s\n", log)
+				}
+				for _, warn := range status.Warnings {
+					_, _ = fmt.Fprintf(bios.Out, "STATUS: %s\n", warn)
+				}
+				return
+			}
 			// Please note that the image ID is reported using an aux message
 			// with its own embedded JSON message and not directly via an "ID"
 			// JSON message.

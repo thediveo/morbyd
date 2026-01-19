@@ -161,6 +161,24 @@ func WithAlwaysRemoveIntermediateContainers() Opt {
 	}
 }
 
+// WithBuildKit requests building with BuildKit.
+func WithBuildKit() Opt {
+	return func(o *Options) error {
+		o.Version = build.BuilderBuildKit
+		return nil
+	}
+}
+
+// WithBuilderV1 requests building with the classic/deprecated builder in the
+// Docker demon. Please note that this is still morbyd's default unless
+// [WithBuildKit] is explicitly specified. Because we're ... morbyd.
+func WithBuilderV1() Opt {
+	return func(o *Options) error {
+		o.Version = build.BuilderV1
+		return nil
+	}
+}
+
 // WithOutput set the writer to which the output of the image build process is
 // sent to.
 func WithOutput(w io.Writer) Opt {

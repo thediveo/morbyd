@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"math/rand"
 	"strings"
 	"time"
 
@@ -98,23 +99,29 @@ var _ = Describe("build image", Ordered, func() {
 				build.WithLabel(""))).Error().To(HaveOccurred())
 		})
 
-		It("builds an image and finds the correct stage build output canary", func(ctx context.Context) {
+		It("builds an image using buildkit and finds the correct stage build output canary", func(ctx context.Context) {
 			const imageref = "morbyd/buzzybocks"
 
 			_, _ = sess.Client().ImageRemove(ctx, imageref, image.RemoveOptions{})
 
+			const oldLatinAlphabet = "ABCDEFGHIKLMNOPQRSTVX"
+			var hello bytes.Buffer
+			for range 10 {
+				hello.WriteByte(oldLatinAlphabet[rand.Intn(len(oldLatinAlphabet))])
+			}
+
 			var buff bytes.Buffer
 			id := Successful(sess.BuildImage(ctx, "_test/buzzybocks",
+				build.WithBuildKit(),
 				build.WithTag(imageref),
-				build.WithoutCache(),
-				build.WithBuildArg("HELLO=WORLD"),
+				build.WithBuildArg("HELLO="+hello.String()),
 				build.WithOutput(io.MultiWriter(GinkgoWriter, &buff)),
 			))
 			Expect(id).NotTo(BeEmpty())
 			Expect(sess.Client().ImageRemove(
 				ctx, imageref, image.RemoveOptions{})).Error().To(
 				Succeed())
-			Expect(buff.String()).To(ContainSubstring("..WORLD.."))
+			Expect(buff.String()).To(ContainSubstring(".." + hello.String() + ".."))
 		})
 
 		It("fails to build an image with a failing Dockerfile", func(ctx context.Context) {

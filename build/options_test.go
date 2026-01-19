@@ -31,6 +31,8 @@ var _ = Describe("image build options", func() {
 			WithTag("fool"),
 			WithTag("fool:oncemore"),
 
+			WithBuildKit(),
+
 			WithBuildArg("foobar="),
 			WithBuildArgs("foo=bar", "baz"),
 
@@ -48,6 +50,7 @@ var _ = Describe("image build options", func() {
 			Expect(opt(&bios)).NotTo(HaveOccurred())
 		}
 		Expect(bios.Tags).To(ConsistOf("fool", "fool:oncemore"))
+		Expect(bios.Version).To(Equal(build.BuilderBuildKit))
 		Expect(bios.BuildArgs).To(And(
 			HaveLen(3),
 			HaveKeyWithValue("foo", gs.PointTo(Equal("bar"))),
@@ -81,6 +84,12 @@ var _ = Describe("image build options", func() {
 	It("sets up the labels map and rejects invalid labels", func() {
 		var opts Options
 		Expect(WithLabels("foo=", "")(&opts)).Error().To(HaveOccurred())
+	})
+
+	It("sets builder v1", func() {
+		var opts Options
+		Expect(WithBuilderV1()(&opts)).Error().NotTo(HaveOccurred())
+		Expect(opts.Version).To(Equal(build.BuilderV1))
 	})
 
 })
