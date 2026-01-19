@@ -26,6 +26,7 @@ import (
 	image "github.com/docker/docker/api/types/image"
 	"github.com/thediveo/morbyd/build"
 	"github.com/thediveo/morbyd/run"
+	"github.com/thediveo/morbyd/safe"
 	"github.com/thediveo/morbyd/session"
 	mock "go.uber.org/mock/gomock"
 
@@ -104,13 +105,14 @@ var _ = Describe("build image", Ordered, func() {
 
 			_, _ = sess.Client().ImageRemove(ctx, imageref, image.RemoveOptions{})
 
+			// cache bustin' ... with LATIN LETTERS.
 			const oldLatinAlphabet = "ABCDEFGHIKLMNOPQRSTVX"
 			var hello bytes.Buffer
 			for range 10 {
 				hello.WriteByte(oldLatinAlphabet[rand.Intn(len(oldLatinAlphabet))])
 			}
 
-			var buff bytes.Buffer
+			var buff safe.Buffer
 			id := Successful(sess.BuildImage(ctx, "_test/buzzybocks",
 				build.WithBuildKit(),
 				build.WithTag(imageref),

@@ -25,6 +25,8 @@ import (
 	dockerbuild "github.com/docker/docker/api/types/build"
 	"github.com/docker/docker/pkg/jsonmessage"
 	bkcontrol "github.com/moby/buildkit/api/services/control"
+	"github.com/moby/buildkit/client"
+	"github.com/moby/buildkit/util/progress/progressui"
 	"github.com/moby/go-archive"
 	"github.com/moby/patternmatcher/ignorefile"
 	"github.com/thediveo/morbyd/build"
@@ -84,6 +86,28 @@ func (s *Session) BuildImage(ctx context.Context, buildctxpath string, opts ...b
 		return "", fmt.Errorf("image build failed, reason: %w", err)
 	}
 	defer resp.Body.Close() //nolint:errcheck // any error is irrelevant at this point
+
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	statech := make(chan *client.SolveStatus, 32)
+	if bios.Version == "2" {
+		// caller requests BuildKit, so we want to leverage buildkit's client
+		// display and progress UI, instead of being a dilettante. (Or is this
+		// instead spelled "dilloitte" correctly?)
+		//
+		// Anyway, we create a display and run its processing loop in a
+		// background go routine, feeding it status messages below as we receive
+		// them via auxillary messages through the HTTP response body.
+		var err error
+		bkdisplay, err := progressui.NewDisplay(bios.Out, progressui.AutoMode)
+		if err != nil {
+			return "", fmt.Errorf("buildkit progress UI display creation failed, reason: %w", err)
+		}
+		go func() {
+			_, _ = bkdisplay.UpdateFrom(ctx, statech)
+		}()
+	}
+
 	// https://stackoverflow.com/a/48579861 pointing to:
 	// https://pkg.go.dev/github.com/moby/moby/pkg/jsonmessage?utm_source=godoc#DisplayJSONMessagesStream
 	err = jsonmessage.DisplayJSONMessagesStream(resp.Body,
@@ -93,6 +117,9 @@ func (s *Session) BuildImage(ctx context.Context, buildctxpath string, opts ...b
 			// protobuf-encoded and transmitted as aux messages with their
 			// dedicated buildkit aux message ID. See also:
 			// https://github.com/moby/moby/discussions/43788#discussioncomment-13291612
+			// Digging deeper into the buildkit code base brings up the
+			// progressui/client display stuff that feeds on status response
+			// messages.
 			if auxmsg.ID == "moby.buildkit.trace" {
 				if auxmsg.Aux == nil {
 					return
@@ -105,15 +132,7 @@ func (s *Session) BuildImage(ctx context.Context, buildctxpath string, opts ...b
 				if err := proto.Unmarshal(bkpbmsg, &status); err != nil {
 					return
 				}
-				for _, status := range status.Statuses {
-					_, _ = fmt.Fprintf(bios.Out, "STATUS: %s\n", status)
-				}
-				for _, log := range status.Logs {
-					_, _ = fmt.Fprintf(bios.Out, "LOG: %s\n", log)
-				}
-				for _, warn := range status.Warnings {
-					_, _ = fmt.Fprintf(bios.Out, "STATUS: %s\n", warn)
-				}
+				statech <- client.NewSolveStatus(&status)
 				return
 			}
 			// Please note that the image ID is reported using an aux message

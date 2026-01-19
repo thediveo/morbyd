@@ -7,7 +7,7 @@
 ![build and test](https://github.com/thediveo/morbyd/actions/workflows/buildandtest.yaml/badge.svg?branch=master)
 ![goroutines](https://img.shields.io/badge/go%20routines-not%20leaking-success)
 [![Go Report Card](https://goreportcard.com/badge/github.com/thediveo/morbyd)](https://goreportcard.com/report/github.com/thediveo/morbyd)
-![Coverage](https://img.shields.io/badge/Coverage-98.0%25-brightgreen)
+![Coverage](https://img.shields.io/badge/Coverage-97.9%25-brightgreen)
 
 `morbyd` is a thin layer on top of the standard Docker Go client to easily build
 and run throw-away test Docker images and containers. And to easily run commands
@@ -55,6 +55,12 @@ below](#devcontainer).
   - testable examples for common tasks to get you quickly up and running. Please
     see the [package
     documentation](https://pkg.go.dev/github.com/thediveo/morbyd).
+
+  - supports BuildKit using the `build.WithBuildKit()` configuration option with
+    `Session.BuildImage`. Morbyd follows the Docker API that still at the time
+    of this writing defaults to the (in the words of the API documentation)
+    "deprecated" builder V1, so BuildKit needs to be opted in. We _are_ slightly
+    morbyd. 
 
   - option function design with extensive [Go Doc
     comments](https://tip.golang.org/doc/comment) that IDEs show upon option
