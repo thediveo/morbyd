@@ -18,6 +18,7 @@ import (
 	"io"
 
 	"github.com/docker/docker/api/types/container"
+	"github.com/thediveo/morbyd/identity"
 )
 
 // Opt is a configuration option to run a command inside a container using
@@ -108,14 +109,6 @@ func WithWorkingDir(path string) Opt {
 	}
 }
 
-// WithUser sets the user (ID or name) that executes the command.
-func WithUser(user string) Opt {
-	return func(o *Options) error {
-		o.Conf.User = user
-		return nil
-	}
-}
-
 // WithPrivileged executes the command as privileged inside the container.
 func WithPrivileged() Opt {
 	return func(o *Options) error {
@@ -129,6 +122,28 @@ func WithPrivileged() Opt {
 func WithConsoleSize(width, height uint) Opt {
 	return func(o *Options) error {
 		o.Conf.ConsoleSize = &[2]uint{height, width} // sic!
+		return nil
+	}
+}
+
+// WithUser configures the user and optionally group the command(s) inside a
+// container will be run as, taking either a user name, user:group names, or a
+// user ID. WithUser will remove any previously configured group, either setting
+// the specified group or configuring no group at all (so that the container
+// image default applies).
+func WithUser[I identity.Principal](id I) Opt {
+	return func(o *Options) error {
+		o.Conf.User = identity.WithUser(id)
+		return nil
+	}
+}
+
+// WithGroup configures the group the command(s) inside a container will be run
+// as, taking either a group name or ID. If an empty group name "" is specified,
+// any configured group name or ID will be removed.
+func WithGroup[I identity.Principal](gid I) Opt {
+	return func(o *Options) error {
+		o.Conf.User = identity.WithGroup(o.Conf.User, gid)
 		return nil
 	}
 }
