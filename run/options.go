@@ -29,6 +29,7 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/strslice"
 	"github.com/docker/go-connections/nat"
+	"github.com/thediveo/morbyd/identity"
 	lbls "github.com/thediveo/morbyd/labels"
 	"github.com/thediveo/morbyd/run/dockercli"
 	"github.com/thediveo/morbyd/strukt"
@@ -667,6 +668,28 @@ func WithCustomInit() Opt {
 	return func(o *Options) error {
 		customInit := true
 		o.Host.Init = &customInit
+		return nil
+	}
+}
+
+// WithUser configures the user and optionally group the command(s) inside a
+// container will be run as, taking either a user name, user:group names, or a
+// user ID. WithUser will remove any previously configured group, either setting
+// the specified group or configuring no group at all (so that the container
+// image default applies).
+func WithUser[I identity.Principal](id I) Opt {
+	return func(o *Options) error {
+		o.Conf.User = identity.WithUser(id)
+		return nil
+	}
+}
+
+// WithGroup configures the group the command(s) inside a container will be run
+// as, taking either a group name or ID. If an empty group name "" is specified,
+// any configured group name or ID will be removed.
+func WithGroup[I identity.Principal](gid I) Opt {
+	return func(o *Options) error {
+		o.Conf.User = identity.WithGroup(o.Conf.User, gid)
 		return nil
 	}
 }

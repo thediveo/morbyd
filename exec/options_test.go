@@ -87,4 +87,39 @@ var _ = Describe("exec command options", func() {
 		Expect(exopts.Conf.ConsoleSize).To(gstruct.PointTo(Equal([2]uint{42, 666})))
 	})
 
+	DescribeTable("user (with group) principals, not principles",
+		func(p any, expected string) {
+			var o Options
+			switch v := p.(type) {
+			case string:
+				_ = WithUser(v)(&o)
+			case int:
+				_ = WithUser(v)(&o)
+			}
+			Expect(o.Conf.User).To(Equal(expected))
+		},
+		Entry("clear", "", ""),
+		Entry("user name", "maroding_marble", "maroding_marble"),
+		Entry("user name", 1000, "1000"),
+		Entry("user:group names", "peter:paul-marry", "peter:paul-marry"),
+	)
+
+	DescribeTable("user/group principals",
+		func(pu string, pg any, expected string) {
+			var o Options
+			_ = WithUser(pu)(&o)
+			switch v := pg.(type) {
+			case string:
+				_ = WithGroup(v)(&o)
+			case int:
+				_ = WithGroup(v)(&o)
+			}
+			Expect(o.Conf.User).To(Equal(expected))
+		},
+		Entry("clear group", "1000:6666", "", "1000"),
+		Entry("replace group", "1000:6666", "blue_breach", "1000:blue_breach"),
+		Entry("replace group (int)", "1000:6666", 42, "1000:42"),
+		Entry("add group", "1000", "blue_breach", "1000:blue_breach"),
+	)
+
 })
