@@ -14,7 +14,11 @@
 
 package ipam
 
-import "github.com/docker/docker/api/types/network"
+import (
+	"net/netip"
+
+	"github.com/moby/moby/api/types/network"
+)
 
 // PoolOpt is a configuration option for an IP address pool.
 type PoolOpt func(*Pool) error
@@ -29,8 +33,12 @@ type Pool network.IPAMConfig
 // specified subnet, or optionally from a sub-range within the subnet. Other
 // options allow further customization.
 func makePool(subnet string, opts ...PoolOpt) (Pool, error) {
+	prefix, err := netip.ParsePrefix(subnet)
+	if err != nil {
+		return Pool{}, err
+	}
 	p := Pool{
-		Subnet: subnet,
+		Subnet: prefix,
 	}
 	for _, opt := range opts {
 		if err := opt(&p); err != nil {
@@ -45,7 +53,11 @@ func makePool(subnet string, opts ...PoolOpt) (Pool, error) {
 // range by default).
 func WithRange(iprange string) PoolOpt {
 	return func(p *Pool) error {
-		p.IPRange = iprange
+		prefix, err := netip.ParsePrefix(iprange)
+		if err != nil {
+			return err
+		}
+		p.IPRange = prefix
 		return nil
 	}
 }
@@ -54,7 +66,11 @@ func WithRange(iprange string) PoolOpt {
 // address.
 func WithGateway(gw string) PoolOpt {
 	return func(p *Pool) error {
-		p.Gateway = gw
+		addr, err := netip.ParseAddr(gw)
+		if err != nil {
+			return err
+		}
+		p.Gateway = addr
 		return nil
 	}
 }
@@ -64,10 +80,14 @@ func WithGateway(gw string) PoolOpt {
 // auxiliary IP address is assigned the specified hostname.
 func WithAuxAddress(hostname string, ip string) PoolOpt {
 	return func(p *Pool) error {
-		if p.AuxAddress == nil {
-			p.AuxAddress = map[string]string{}
+		addr, err := netip.ParseAddr(ip)
+		if err != nil {
+			return err
 		}
-		p.AuxAddress[hostname] = ip
+		if p.AuxAddress == nil {
+			p.AuxAddress = map[string]netip.Addr{}
+		}
+		p.AuxAddress[hostname] = addr
 		return nil
 	}
 }

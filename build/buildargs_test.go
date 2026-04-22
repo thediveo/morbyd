@@ -15,9 +15,10 @@
 package build
 
 import (
+	gi "github.com/onsi/gomega/gstruct"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	gi "github.com/onsi/gomega/gstruct"
 )
 
 var _ = Describe("build args", func() {

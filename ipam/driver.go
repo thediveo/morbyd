@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/docker/docker/api/types/network"
+	"github.com/moby/moby/api/types/network"
 )
 
 // IPAMOpt is a configuration option for configuring an IPAM driver (or “IPAM”

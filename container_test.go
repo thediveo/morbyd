@@ -21,12 +21,14 @@ import (
 	"math/rand"
 	"time"
 
-	container "github.com/docker/docker/api/types/container"
-	"github.com/thediveo/morbyd/run"
-	"github.com/thediveo/morbyd/safe"
-	"github.com/thediveo/morbyd/session"
-	"github.com/thediveo/morbyd/timestamper"
+	"github.com/moby/moby/api/types/container"
+	client "github.com/moby/moby/client"
 	mock "go.uber.org/mock/gomock"
+
+	"github.com/thediveo/morbyd/v2/run"
+	"github.com/thediveo/morbyd/v2/session"
+	"github.com/thediveo/morbyd/v2/timestamper"
+	"github.com/thediveo/safe"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -66,11 +68,11 @@ var _ = Describe("containers", Ordered, func() {
 
 		Expect(cntr.Pause(ctx)).To(Succeed())
 		Expect(cntr.Refresh(ctx)).To(Succeed())
-		Expect(cntr.Details.State.Paused).To(BeTrue())
+		Expect(cntr.Details.Container.State.Paused).To(BeTrue())
 
 		Expect(cntr.Unpause(ctx)).To(Succeed())
 		Expect(cntr.Refresh(ctx)).To(Succeed())
-		Expect(cntr.Details.State.Paused).To(BeFalse())
+		Expect(cntr.Details.Container.State.Paused).To(BeFalse())
 	})
 
 	It("stops a container cooperatively", func(ctx context.Context) {
@@ -125,7 +127,7 @@ var _ = Describe("containers", Ordered, func() {
 		})
 		rec := sess.Client().(*MockClient).EXPECT()
 
-		rec.ContainerInspect(Any, Any).Return(container.InspectResponse{}, errors.New("error IJK305I"))
+		rec.ContainerInspect(Any, Any, Any).Return(client.ContainerInspectResult{}, errors.New("error IJK305I"))
 
 		cntr := &Container{Session: sess, ID: "bad1dea"}
 		Expect(cntr.Refresh(ctx)).Error().To(MatchError(ContainSubstring("cannot refresh details of container")))
@@ -141,7 +143,10 @@ var _ = Describe("containers", Ordered, func() {
 		rec := sess.Client().(*MockClient).EXPECT()
 
 		errch := make(chan error, 1)
-		rec.ContainerWait(Any, Any, Any).Return(make(chan container.WaitResponse), errch)
+		rec.ContainerWait(Any, Any, Any).Return(client.ContainerWaitResult{
+			Result: make(chan container.WaitResponse),
+			Error:  errch,
+		})
 
 		errch <- errors.New("error IJK305I")
 		cntr := &Container{
@@ -160,7 +165,7 @@ var _ = Describe("containers", Ordered, func() {
 			run.WithCommand("/bin/sh", "-c", "trap 'exit 1' TERM; while true; do sleep 1; done")))
 		Expect(cntr.PID(ctx)).Error().NotTo(HaveOccurred())
 		Expect(cntr.Rename(ctx, "test_bar")).To(Succeed())
-		Expect(cntr.Details.Name).To(Equal("/test_bar"))
+		Expect(cntr.Details.Container.Name).To(Equal("/test_bar"))
 		cntr.Kill(ctx)
 	})
 

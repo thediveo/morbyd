@@ -19,8 +19,9 @@ import (
 	"fmt"
 	"maps"
 
-	"github.com/docker/docker/api/types/network"
-	"github.com/thediveo/morbyd/net"
+	"github.com/moby/moby/client"
+
+	"github.com/thediveo/morbyd/v2/net"
 )
 
 // CreateNetwork creates a new “custom” Docker network using the specified
@@ -49,17 +50,17 @@ func (s *Session) CreateNetwork(ctx context.Context, name string, opts ...net.Op
 		}
 	}
 
-	createResp, err := s.moby.NetworkCreate(ctx, name, network.CreateOptions(nopts))
+	createResp, err := s.moby.NetworkCreate(ctx, name, client.NetworkCreateOptions(nopts))
 	if err != nil {
 		return nil, fmt.Errorf("cannot create new network %q, reason: %w",
 			name, err)
 	}
 
-	detailsResp, err := s.moby.NetworkInspect(ctx, createResp.ID, network.InspectOptions{
+	detailsResp, err := s.moby.NetworkInspect(ctx, createResp.ID, client.NetworkInspectOptions{
 		Verbose: true,
 	})
 	if err != nil {
-		_ = s.moby.NetworkRemove(ctx, createResp.ID)
+		_, _ = s.moby.NetworkRemove(ctx, createResp.ID, client.NetworkRemoveOptions{})
 		return nil, fmt.Errorf("cannot inspect newly created network %q, reason: %w",
 			name, err)
 	}

@@ -18,9 +18,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/docker/docker/client"
-	lbls "github.com/thediveo/morbyd/labels"
-	"github.com/thediveo/morbyd/moby"
+	"github.com/moby/moby/client"
+
+	lbls "github.com/thediveo/morbyd/v2/labels"
+	"github.com/thediveo/morbyd/v2/moby"
 )
 
 // Opt is a configuration option for creating sessions using

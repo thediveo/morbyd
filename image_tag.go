@@ -16,9 +16,15 @@ package morbyd
 
 import (
 	"context"
+
+	"github.com/moby/moby/client"
 )
 
 // TagImage tags a container image.
 func (s *Session) TagImage(ctx context.Context, source, target string) error {
-	return s.moby.ImageTag(ctx, source, target)
+	_, err := s.moby.ImageTag(ctx, client.ImageTagOptions{
+		Source: source,
+		Target: target,
+	})
+	return err
 }

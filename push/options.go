@@ -18,7 +18,7 @@ import (
 	"io"
 
 	"github.com/containerd/platforms"
-	"github.com/docker/docker/api/types/image"
+	"github.com/moby/moby/client"
 )
 
 // Opt is a configuration option to push a container image using
@@ -30,7 +30,7 @@ type Opt func(*Options) error
 // processes.
 type Options struct {
 	Out io.Writer
-	image.PushOptions
+	client.ImagePushOptions
 }
 
 // WithOutput specifies the writer to send the output of the image push process

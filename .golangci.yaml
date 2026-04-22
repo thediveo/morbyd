@@ -13,4 +13,17 @@ linters:
     - godoclint
     - modernize
     - nolintlint
-    
+formatters:
+  enable:
+    - gci
+    - gofmt
+  settings:
+    # https://golangci-lint.run/docs/formatters/configuration/#gci
+    gci:
+      sections:
+        - standard
+        - default
+        - localmodule
+        - prefix(github.com/onsi)
+        - dot
+      custom-order: true

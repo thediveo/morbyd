@@ -16,9 +16,10 @@
         "ghcr.io/thediveo/devcontainer-features/local-pkgsite:0": {},
         "ghcr.io/thediveo/devcontainer-features/goreportcard:0": {},
         "ghcr.io/thediveo/devcontainer-features/go-mod-upgrade:0": {},
+        "ghcr.io/thediveo/devcontainer-features/lazygit:0": {},
         "ghcr.io/thediveo/devcontainer-features/gocover:0": {
             "tags": "matchers",
-            "uncovered-packages": "github.com/thediveo/morbyd/run/dockercli",
+            "uncovered-packages": "github.com/thediveo/morbyd/v2/run/dockercli",
             "num-programs": "1",
             "race": true,
             "verbose": true,
@@ -37,7 +38,8 @@
                 "stkb.rewrap",
                 "brunnerh.insert-unicode",
                 "mhutchie.git-graph",
-                "ms-vscode.makefile-tools"
+                "ms-vscode.makefile-tools",
+                "redhat.vscode-yaml"
             ]
         }
     }

@@ -20,14 +20,14 @@ import (
 	"io"
 	"time"
 
-	types "github.com/docker/docker/api/types"
-	container "github.com/docker/docker/api/types/container"
-	"github.com/thediveo/morbyd/exec"
-	"github.com/thediveo/morbyd/run"
-	"github.com/thediveo/morbyd/safe"
-	"github.com/thediveo/morbyd/session"
-	"github.com/thediveo/morbyd/timestamper"
+	"github.com/moby/moby/client"
+	"github.com/thediveo/safe"
 	mock "go.uber.org/mock/gomock"
+
+	"github.com/thediveo/morbyd/v2/exec"
+	"github.com/thediveo/morbyd/v2/run"
+	"github.com/thediveo/morbyd/v2/session"
+	"github.com/thediveo/morbyd/v2/timestamper"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -160,14 +160,14 @@ var _ = Describe("execute command inside container", Ordered, func() {
 		It("reports when container-exec cannot be created", func(ctx context.Context) {
 			ctrl := mock.NewController(GinkgoT())
 			sess := Successful(NewSession(ctx,
-				WithMockController(ctrl, "ContainerInspect", "ContainerExecCreate")))
+				WithMockController(ctrl, "ContainerInspect", "ExecCreate")))
 			DeferCleanup(func(ctx context.Context) {
 				sess.Close(ctx)
 			})
 			rec := sess.Client().(*MockClient).EXPECT()
 
-			rec.ContainerInspect(Any, Any).Return(container.InspectResponse{}, nil)
-			rec.ContainerExecCreate(Any, Any, Any).Return(container.ExecCreateResponse{}, errors.New("error IJK305I"))
+			rec.ContainerInspect(Any, Any, Any).Return(client.ContainerInspectResult{}, nil)
+			rec.ExecCreate(Any, Any, Any).Return(client.ExecCreateResult{}, errors.New("error IJK305I"))
 
 			cntr := &Container{
 				Session: sess,
@@ -179,15 +179,15 @@ var _ = Describe("execute command inside container", Ordered, func() {
 			ctrl := mock.NewController(GinkgoT())
 			sess := Successful(NewSession(ctx,
 				WithMockController(ctrl,
-					"ContainerInspect", "ContainerExecCreate", "ContainerExecAttach")))
+					"ContainerInspect", "ExecCreate", "ExecAttach")))
 			DeferCleanup(func(ctx context.Context) {
 				sess.Close(ctx)
 			})
 			rec := sess.Client().(*MockClient).EXPECT()
 
-			rec.ContainerInspect(Any, Any).Return(container.InspectResponse{}, nil)
-			rec.ContainerExecCreate(Any, Any, Any).Return(container.ExecCreateResponse{ID: "42"}, nil)
-			rec.ContainerExecAttach(Any, Any, Any).Return(types.HijackedResponse{}, errors.New("error IJK305I"))
+			rec.ContainerInspect(Any, Any, Any).Return(client.ContainerInspectResult{}, nil)
+			rec.ExecCreate(Any, Any, Any).Return(client.ExecCreateResult{ID: "42"}, nil)
+			rec.ExecAttach(Any, Any, Any).Return(client.ExecAttachResult{}, errors.New("error IJK305I"))
 
 			cntr := &Container{
 				Session: sess,

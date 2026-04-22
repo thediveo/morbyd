@@ -18,9 +18,10 @@ import (
 	"bytes"
 	"strings"
 
+	"github.com/moby/moby/client"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gstruct"
 )
 
 func opts(opts ...Opt) Options {
@@ -48,21 +49,21 @@ var _ = Describe("exec command options", func() {
 		))
 
 		Expect(opts(WithCombinedOutput(&stdout))).To(And(
-			HaveField("Conf.Tty", BeFalse()),
+			HaveField("Conf.TTY", BeFalse()),
 			HaveField("In", BeNil()),
 			HaveField("Out", BeIdenticalTo(&stdout)),
 			HaveField("Err", BeIdenticalTo(&stdout)),
 		))
 
 		Expect(opts(WithDemuxedOutput(&stdout, &stderr))).To(And(
-			HaveField("Conf.Tty", BeFalse()),
+			HaveField("Conf.TTY", BeFalse()),
 			HaveField("In", BeNil()),
 			HaveField("Out", BeIdenticalTo(&stdout)),
 			HaveField("Err", BeIdenticalTo(&stderr)),
 		))
 
 		Expect(opts(WithInput(&stdin))).To(And(
-			HaveField("Conf.Tty", BeFalse()),
+			HaveField("Conf.TTY", BeFalse()),
 			HaveField("In", BeIdenticalTo(&stdin)),
 			HaveField("Out", BeNil()),
 			HaveField("Err", BeNil()),
@@ -83,8 +84,8 @@ var _ = Describe("exec command options", func() {
 		Expect(exopts.Conf.Privileged).To(BeTrue())
 		Expect(exopts.Conf.WorkingDir).To(Equal("/foo"))
 		Expect(exopts.Conf.User).To(Equal("foo"))
-		Expect(exopts.Conf.Tty).To(BeTrue())
-		Expect(exopts.Conf.ConsoleSize).To(gstruct.PointTo(Equal([2]uint{42, 666})))
+		Expect(exopts.Conf.TTY).To(BeTrue())
+		Expect(exopts.Conf.ConsoleSize).To(Equal(client.ConsoleSize{Width: 666, Height: 42}))
 	})
 
 	DescribeTable("user (with group) principals, not principles",

@@ -18,7 +18,7 @@ import (
 	"io"
 
 	"github.com/containerd/platforms"
-	"github.com/docker/docker/api/types/image"
+	"github.com/moby/moby/client"
 )
 
 // Opt is a configuration option to pull a container image using
@@ -30,7 +30,7 @@ type Opt func(*Options) error
 // processes.
 type Options struct {
 	Out io.Writer
-	image.PullOptions
+	client.ImagePullOptions
 }
 
 // WithOutput specifies the writer to send the output of the image pull process
@@ -52,13 +52,15 @@ func WithAllTags() Opt {
 }
 
 // WithPlatform specifies to push a platform-specific manifest as a
-// single-platform image to the registry.
+// single-platform image to the registry; for multi-platform images, specify
+// WithPlatform multiple times.
 func WithPlatform(platform string) Opt {
 	return func(o *Options) error {
-		if _, err := platforms.Parse(platform); err != nil {
+		pltfrm, err := platforms.Parse(platform)
+		if err != nil {
 			return err
 		}
-		o.Platform = platform
+		o.Platforms = append(o.Platforms, pltfrm)
 		return nil
 	}
 }

@@ -20,9 +20,10 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/pkg/stdcopy"
-	"github.com/thediveo/morbyd/exec"
+	"github.com/moby/moby/api/pkg/stdcopy"
+	"github.com/moby/moby/client"
+
+	"github.com/thediveo/morbyd/v2/exec"
 )
 
 // ExecSession represents a command running inside a container.
@@ -55,7 +56,7 @@ type ExecSession struct {
 // be attached to the executing command's input/output streams.
 func (c *Container) Exec(ctx context.Context, cmd exec.Cmd, opts ...exec.Opt) (es *ExecSession, err error) {
 	exopts := exec.Options{
-		Conf: container.ExecOptions{
+		Conf: client.ExecCreateOptions{
 			Cmd: cmd,
 		},
 	}
@@ -76,16 +77,16 @@ func (c *Container) Exec(ctx context.Context, cmd exec.Cmd, opts ...exec.Opt) (e
 	// To quote from the Docker CLI
 	// (https://github.com/docker/cli/blob/9e2615bc467fb4ec9a177049a6f2b4fbe5a20e65/cli/command/container/exec.go#L107):
 	//
-	//   "We need to check the tty _before_ we do the ContainerExecCreate, because
+	//   "We need to check the tty _before_ we do the ExecCreate, because
 	//    otherwise if we error out we will leak execIDs on the server (and there's
 	//    no easy way to clean those up). But also in order to make "not exist"
 	//    errors take precedence we do a dummy inspect first."
-	if _, err := c.Session.moby.ContainerInspect(ctx, c.ID); err != nil {
+	if _, err := c.Session.moby.ContainerInspect(ctx, c.ID, client.ContainerInspectOptions{}); err != nil {
 		return nil, fmt.Errorf("cannot execute into container %q/%s, reason: %w",
 			c.Name, c.AbbreviatedID(), err)
 	}
 
-	execResp, err := c.Session.moby.ContainerExecCreate(ctx, c.ID, exopts.Conf)
+	execResp, err := c.Session.moby.ExecCreate(ctx, c.ID, exopts.Conf)
 	if err != nil {
 		return nil, fmt.Errorf("cannot execute into container %q/%s, reason: %w",
 			c.Name, c.AbbreviatedID(), err)
@@ -93,9 +94,9 @@ func (c *Container) Exec(ctx context.Context, cmd exec.Cmd, opts ...exec.Opt) (e
 
 	// now start executing the command and at the same time attach to its input
 	// and output. Nota bene: the Docker Go client is confusing here, as there's
-	// also a ContainerExecStart which also starts the exec but doesn't attach.
-	attachResp, err := c.Session.moby.ContainerExecAttach(ctx, execResp.ID, container.ExecAttachOptions{
-		Tty:         exopts.Conf.Tty,
+	// also a ExecStart which also starts the exec but doesn't attach.
+	attachResp, err := c.Session.moby.ExecAttach(ctx, execResp.ID, client.ExecAttachOptions{
+		TTY:         exopts.Conf.TTY,
 		ConsoleSize: exopts.Conf.ConsoleSize,
 	})
 	if err != nil {
@@ -113,7 +114,7 @@ func (c *Container) Exec(ctx context.Context, cmd exec.Cmd, opts ...exec.Opt) (e
 			close(allDone)
 		}()
 
-		if exopts.Conf.Tty {
+		if exopts.Conf.TTY {
 			// When using a TTY, only copy the single combined output stream
 			// into the output stream specified in the run options.
 			_, _ = io.Copy(exopts.Out, attachResp.Reader)
@@ -158,13 +159,13 @@ func (c *Container) Exec(ctx context.Context, cmd exec.Cmd, opts ...exec.Opt) (e
 // the passed context gets cancelled.
 func (e *ExecSession) PID(ctx context.Context) (int, error) {
 	for {
-		inspRes, err := e.Container.Session.moby.ContainerExecInspect(ctx, e.ID)
+		inspRes, err := e.Container.Session.moby.ExecInspect(ctx, e.ID, client.ExecInspectOptions{})
 		if err != nil {
 			return 0, fmt.Errorf("cannot determine the PID of the excuting command, reason: %w",
 				err)
 		}
-		if inspRes.Running && inspRes.Pid != 0 {
-			return inspRes.Pid, nil
+		if inspRes.Running && inspRes.PID != 0 {
+			return inspRes.PID, nil
 		}
 		// We might end up being too early and thus getting our signals
 		// crossed. If the output has already finished, then we're already
@@ -199,7 +200,7 @@ func (e *ExecSession) Wait(ctx context.Context) (exitcode int, err error) {
 	case <-e.done:
 		// fall through into happy path...
 	}
-	inspRes, err := e.Container.Session.moby.ContainerExecInspect(ctx, e.ID)
+	inspRes, err := e.Container.Session.moby.ExecInspect(ctx, e.ID, client.ExecInspectOptions{})
 	if err != nil {
 		return 0, fmt.Errorf("error fetching result code of executed command, reason: %w", err)
 	}

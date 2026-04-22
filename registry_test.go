@@ -24,14 +24,14 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/docker/docker/api/types/registry"
-	"github.com/thediveo/morbyd/pull"
-	"github.com/thediveo/morbyd/push"
-	"github.com/thediveo/morbyd/run"
-	"github.com/thediveo/morbyd/session"
-	"github.com/thediveo/morbyd/timestamper"
-
+	"github.com/moby/moby/api/types/registry"
 	"golang.org/x/crypto/bcrypt"
+
+	"github.com/thediveo/morbyd/v2/pull"
+	"github.com/thediveo/morbyd/v2/push"
+	"github.com/thediveo/morbyd/v2/run"
+	"github.com/thediveo/morbyd/v2/session"
+	"github.com/thediveo/morbyd/v2/timestamper"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

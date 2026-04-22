@@ -16,18 +16,18 @@ package run
 
 import (
 	"bytes"
-	"net"
+	"net/netip"
 	"os"
 	"strings"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/mount"
-	"github.com/docker/docker/api/types/network"
-	"github.com/docker/go-connections/nat"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/mount"
+	"github.com/moby/moby/api/types/network"
+
+	gs "github.com/onsi/gomega/gstruct"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gstruct"
 	. "github.com/thediveo/success"
 )
 
@@ -56,21 +56,21 @@ var _ = Describe("run (container) options", func() {
 		))
 
 		Expect(opts(WithCombinedOutput(&stdout))).To(And(
-			HaveField("Conf.Tty", BeFalse()),
+			HaveField("Opts.Config.Tty", BeFalse()),
 			HaveField("In", BeNil()),
 			HaveField("Out", BeIdenticalTo(&stdout)),
 			HaveField("Err", BeIdenticalTo(&stdout)),
 		))
 
 		Expect(opts(WithDemuxedOutput(&stdout, &stderr))).To(And(
-			HaveField("Conf.Tty", BeFalse()),
+			HaveField("Opts.Config.Tty", BeFalse()),
 			HaveField("In", BeNil()),
 			HaveField("Out", BeIdenticalTo(&stdout)),
 			HaveField("Err", BeIdenticalTo(&stderr)),
 		))
 
 		Expect(opts(WithInput(&stdin))).To(And(
-			HaveField("Conf.Tty", BeFalse()),
+			HaveField("Opts.Config.Tty", BeFalse()),
 			HaveField("In", BeIdenticalTo(&stdin)),
 			HaveField("Out", BeNil()),
 			HaveField("Err", BeNil()),
@@ -117,70 +117,70 @@ var _ = Describe("run (container) options", func() {
 			WithCustomInit(),
 		)
 
-		Expect(o.Name).To(Equal("loosing_lattice"))
-		Expect(o.Conf.Cmd).To(ConsistOf("/bin/bash", "-c", "false"))
-		Expect(o.Conf.Env).To(ConsistOf("foo=bar", "baz="))
-		Expect(o.Conf.Labels).NotTo(HaveKey("hellorld"))
-		Expect(o.Conf.Labels).To(And(
+		Expect(o.Opts.Name).To(Equal("loosing_lattice"))
+		Expect(o.Opts.Config.Cmd).To(ConsistOf("/bin/bash", "-c", "false"))
+		Expect(o.Opts.Config.Env).To(ConsistOf("foo=bar", "baz="))
+		Expect(o.Opts.Config.Labels).NotTo(HaveKey("hellorld"))
+		Expect(o.Opts.Config.Labels).To(And(
 			HaveKeyWithValue("foo", "bar"),
 			HaveKeyWithValue("baz", ""),
 		))
-		Expect(o.Conf.StopSignal).To(Equal("SIGDOOZE"))
-		Expect(*o.Conf.StopTimeout).To(Equal(42))
-		Expect(o.Conf.Tty).To(BeTrue())
-		Expect(o.Host.Privileged).To(BeTrue())
-		Expect(o.Host.CapAdd).To(ConsistOf("CAP_SUCCESS"))
-		Expect(o.Host.CapDrop).To(ConsistOf("ALL"))
-		Expect(o.Host.CgroupnsMode).To(Equal(container.CgroupnsMode("c-host")))
-		Expect(o.Host.IpcMode).To(Equal(container.IpcMode("i-host")))
-		Expect(o.Host.NetworkMode).To(Equal(container.NetworkMode("n-host")))
-		Expect(o.Host.PidMode).To(Equal(container.PidMode("p-host")))
-		Expect(o.Host.Tmpfs).To(HaveKeyWithValue("/tmp", ""))
-		Expect(o.Host.Tmpfs).To(HaveKeyWithValue("/temp", "tmpfs-size=42"))
-		Expect(o.Host.Devices).To(ConsistOf(
+		Expect(o.Opts.Config.StopSignal).To(Equal("SIGDOOZE"))
+		Expect(*o.Opts.Config.StopTimeout).To(Equal(42))
+		Expect(o.Opts.Config.Tty).To(BeTrue())
+		Expect(o.Opts.HostConfig.Privileged).To(BeTrue())
+		Expect(o.Opts.HostConfig.CapAdd).To(ConsistOf("CAP_SUCCESS"))
+		Expect(o.Opts.HostConfig.CapDrop).To(ConsistOf("ALL"))
+		Expect(o.Opts.HostConfig.CgroupnsMode).To(Equal(container.CgroupnsMode("c-host")))
+		Expect(o.Opts.HostConfig.IpcMode).To(Equal(container.IpcMode("i-host")))
+		Expect(o.Opts.HostConfig.NetworkMode).To(Equal(container.NetworkMode("n-host")))
+		Expect(o.Opts.HostConfig.PidMode).To(Equal(container.PidMode("p-host")))
+		Expect(o.Opts.HostConfig.Tmpfs).To(HaveKeyWithValue("/tmp", ""))
+		Expect(o.Opts.HostConfig.Tmpfs).To(HaveKeyWithValue("/temp", "tmpfs-size=42"))
+		Expect(o.Opts.HostConfig.Devices).To(ConsistOf(
 			container.DeviceMapping{PathOnHost: "/dev/foo", PathInContainer: "/dev/foo", CgroupPermissions: "rwm"},
 			container.DeviceMapping{PathOnHost: "/dev/foo", PathInContainer: "/dev/fool", CgroupPermissions: "rwm"},
 			container.DeviceMapping{PathOnHost: "/dev/foo", PathInContainer: "/dev/fool", CgroupPermissions: "r"},
 		))
-		Expect(o.Host.ReadonlyRootfs).To(BeTrue())
-		Expect(o.Host.SecurityOpt).To(ConsistOf("all=unconfined"))
-		Expect(o.Net.EndpointsConfig).To(And(
+		Expect(o.Opts.HostConfig.ReadonlyRootfs).To(BeTrue())
+		Expect(o.Opts.HostConfig.SecurityOpt).To(ConsistOf("all=unconfined"))
+		Expect(o.Opts.NetworkingConfig.EndpointsConfig).To(And(
 			HaveKeyWithValue("one", &network.EndpointSettings{NetworkID: "one"}),
 			HaveKeyWithValue("two", &network.EndpointSettings{NetworkID: "two"}),
 		))
-		Expect(o.Host.ConsoleSize).To(Equal([2]uint{42, 666}))
-		Expect(o.Conf.Hostname).To(Equal("foohost"))
-		Expect(o.Host.RestartPolicy).To(Equal(container.RestartPolicy{
+		Expect(o.Opts.HostConfig.ConsoleSize).To(Equal([2]uint{42, 666}))
+		Expect(o.Opts.Config.Hostname).To(Equal("foohost"))
+		Expect(o.Opts.HostConfig.RestartPolicy).To(Equal(container.RestartPolicy{
 			Name:              "always",
 			MaximumRetryCount: 666,
 		}))
 
-		Expect(o.Host.PublishAllPorts).To(BeTrue())
-		Expect(o.Conf.ExposedPorts).To(HaveLen(2))
-		Expect(o.Conf.ExposedPorts).To(HaveKey(nat.Port("1234/tcp")))
-		Expect(o.Conf.ExposedPorts).To(HaveKey(nat.Port("12345/udp")))
-		Expect(o.Host.PortBindings).To(HaveLen(2))
-		Expect(o.Host.PortBindings).To(HaveKeyWithValue(
-			nat.Port("1234/tcp"),
+		Expect(o.Opts.HostConfig.PublishAllPorts).To(BeTrue())
+		Expect(o.Opts.Config.ExposedPorts).To(HaveLen(2))
+		Expect(o.Opts.Config.ExposedPorts).To(HaveKey(network.MustParsePort("1234/tcp")))
+		Expect(o.Opts.Config.ExposedPorts).To(HaveKey(network.MustParsePort("12345/udp")))
+		Expect(o.Opts.HostConfig.PortBindings).To(HaveLen(2))
+		Expect(o.Opts.HostConfig.PortBindings).To(HaveKeyWithValue(
+			network.MustParsePort("1234/tcp"),
 			ConsistOf(
-				nat.PortBinding{HostIP: "127.0.0.1", HostPort: "0"},
-				nat.PortBinding{HostIP: "fe80::dead:beef", HostPort: "2345"})))
-		Expect(o.Host.PortBindings).To(HaveKeyWithValue(
-			nat.Port("12345/udp"),
-			ConsistOf(nat.PortBinding{HostIP: "127.0.0.2", HostPort: "0"})))
+				network.PortBinding{HostIP: netip.MustParseAddr("127.0.0.1"), HostPort: "0"},
+				network.PortBinding{HostIP: netip.MustParseAddr("fe80::dead:beef"), HostPort: "2345"})))
+		Expect(o.Opts.HostConfig.PortBindings).To(HaveKeyWithValue(
+			network.MustParsePort("12345/udp"),
+			ConsistOf(network.PortBinding{HostIP: netip.MustParseAddr("127.0.0.2"), HostPort: "0"})))
 
-		Expect(o.Host.CpusetCpus).To(Equal("1,3,5,99"))
-		Expect(o.Host.CpusetMems).To(Equal("6,66"))
-		Expect(o.Host.Init).To(gstruct.PointTo(BeTrue()))
+		Expect(o.Opts.HostConfig.CpusetCpus).To(Equal("1,3,5,99"))
+		Expect(o.Opts.HostConfig.CpusetMems).To(Equal("6,66"))
+		Expect(o.Opts.HostConfig.Init).To(gs.PointTo(BeTrue()))
 
 		o = opts(WithLabel("foo=bar"))
-		Expect(o.Conf.Labels).To(HaveKeyWithValue("foo", "bar"))
+		Expect(o.Opts.Config.Labels).To(HaveKeyWithValue("foo", "bar"))
 
 		o = Options{}
 		Expect(WithLabels("=")(&o)).NotTo(Succeed())
 
 		o = opts(WithTmpfsOpts("/temp", "tmpfs-size=42"))
-		Expect(o.Host.Tmpfs).To(HaveKeyWithValue("/temp", "tmpfs-size=42"))
+		Expect(o.Opts.HostConfig.Tmpfs).To(HaveKeyWithValue("/temp", "tmpfs-size=42"))
 	})
 
 	It("rejects invalid published port mappings", func() {
@@ -217,16 +217,16 @@ var _ = Describe("run (container) options", func() {
 			WithMount("type=volume,source=/foo,target=/bar,readonly"),
 		)
 
-		Expect(o.Conf.Volumes).To(HaveLen(1))
-		Expect(o.Conf.Volumes).To(HaveKey("/foo"))
+		Expect(o.Opts.Config.Volumes).To(HaveLen(1))
+		Expect(o.Opts.Config.Volumes).To(HaveKey("/foo"))
 
-		Expect(o.Host.Binds).To(ConsistOf(
+		Expect(o.Opts.HostConfig.Binds).To(ConsistOf(
 			"/run:/run2:ro",
 			"/fool:/bar:z",
 			Successful(os.Getwd())+":/run",
 		))
 
-		Expect(o.Host.Mounts).To(ConsistOf(
+		Expect(o.Opts.HostConfig.Mounts).To(ConsistOf(
 			mount.Mount{
 				Type:     "volume",
 				Source:   "/foo",
@@ -254,11 +254,11 @@ var _ = Describe("run (container) options", func() {
 	})
 
 	DescribeTable("published port mapping syntax",
-		func(mapping string, expectedIP net.IP, expectedHostPort int, expectedCntrPort int, expectedL4Proto string, ok bool) {
+		func(mapping string, expectedIP netip.Addr, expectedHostPort int, expectedCntrPort int, expectedL4Proto string, ok bool) {
 			ip, hp, cp, l4p, err := parsePortMapping(mapping)
 			if !ok {
 				Expect(err).To(HaveOccurred())
-				Expect(ip).To(BeNil())
+				Expect(ip.IsValid()).To(BeFalse())
 				Expect(hp).To(BeZero())
 				Expect(cp).To(BeZero())
 				Expect(l4p).To(BeEmpty())
@@ -295,12 +295,12 @@ var _ = Describe("run (container) options", func() {
 		Entry(nil, "1234", nil, 0, 1234, "tcp", true),
 		Entry(nil, "1234/udp", nil, 0, 1234, "udp", true),
 
-		Entry(nil, "127.0.0.1:1234", net.ParseIP("127.0.0.1").To4(), 0, 1234, "tcp", true),
-		Entry(nil, "[::1]:1234", net.ParseIP("::1"), 0, 1234, "tcp", true),
+		Entry(nil, "127.0.0.1:1234", netip.MustParseAddr("127.0.0.1"), 0, 1234, "tcp", true),
+		Entry(nil, "[::1]:1234", netip.MustParseAddr("::1"), 0, 1234, "tcp", true),
 
 		Entry(nil, "2345:1234", nil, 2345, 1234, "tcp", true),
-		Entry(nil, "127.0.0.1:2345:1234", net.ParseIP("127.0.0.1").To4(), 2345, 1234, "tcp", true),
-		Entry(nil, "[::1]:2345:1234", net.ParseIP("::1"), 2345, 1234, "tcp", true),
+		Entry(nil, "127.0.0.1:2345:1234", netip.MustParseAddr("127.0.0.1"), 2345, 1234, "tcp", true),
+		Entry(nil, "[::1]:2345:1234", netip.MustParseAddr("::1"), 2345, 1234, "tcp", true),
 	)
 
 	DescribeTable("user (with group) principals, not principles",
@@ -312,7 +312,7 @@ var _ = Describe("run (container) options", func() {
 			case int:
 				_ = WithUser(v)(&o)
 			}
-			Expect(o.Conf.User).To(Equal(expected))
+			Expect(o.Opts.Config.User).To(Equal(expected))
 		},
 		Entry("clear", "", ""),
 		Entry("user name", "maroding_marble", "maroding_marble"),
@@ -330,7 +330,7 @@ var _ = Describe("run (container) options", func() {
 			case int:
 				_ = WithGroup(v)(&o)
 			}
-			Expect(o.Conf.User).To(Equal(expected))
+			Expect(o.Opts.Config.User).To(Equal(expected))
 		},
 		Entry("clear group", "1000:6666", "", "1000"),
 		Entry("replace group", "1000:6666", "blue_breach", "1000:blue_breach"),

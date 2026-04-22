@@ -19,12 +19,14 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/thediveo/morbyd"
-	"github.com/thediveo/morbyd/ipam"
-	"github.com/thediveo/morbyd/net"
-	"github.com/thediveo/morbyd/run"
-	"github.com/thediveo/morbyd/safe"
-	"github.com/thediveo/morbyd/session"
+	"github.com/moby/moby/client"
+
+	"github.com/thediveo/morbyd/v2"
+	"github.com/thediveo/morbyd/v2/ipam"
+	"github.com/thediveo/morbyd/v2/net"
+	"github.com/thediveo/morbyd/v2/run"
+	"github.com/thediveo/morbyd/v2/session"
+	"github.com/thediveo/safe"
 )
 
 // Create a new “custom” Docker network, then run an example container attached
@@ -77,7 +79,7 @@ func ExampleSession_CreateNetwork() {
 	}
 	defer sess.Close(ctx)
 
-	_ = sess.Client().NetworkRemove(ctx, "my-notwork")
+	_, _ = sess.Client().NetworkRemove(ctx, "my-notwork", client.NetworkRemoveOptions{})
 	netw, err := sess.CreateNetwork(ctx, "my-notwork",
 		net.WithInternal(),
 		net.WithIPAM(ipam.WithPool("0.0.42.0/24")))

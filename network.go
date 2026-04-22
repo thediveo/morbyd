@@ -17,16 +17,17 @@ package morbyd
 import (
 	"context"
 
-	"github.com/docker/docker/api/types/network"
+	"github.com/moby/moby/client"
 )
 
 type Network struct {
 	Name    string
 	ID      string
 	Session *Session
-	Details network.Summary
+	Details client.NetworkInspectResult
 }
 
 func (n *Network) Remove(ctx context.Context) error {
-	return n.Session.moby.NetworkRemove(ctx, n.ID)
+	_, err := n.Session.moby.NetworkRemove(ctx, n.ID, client.NetworkRemoveOptions{})
+	return err
 }

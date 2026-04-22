@@ -15,7 +15,7 @@
 package bridge
 
 import (
-	"github.com/thediveo/morbyd/net"
+	"github.com/thediveo/morbyd/v2/net"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

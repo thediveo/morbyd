@@ -19,8 +19,9 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/docker/docker/pkg/jsonmessage"
-	"github.com/thediveo/morbyd/push"
+	"github.com/moby/moby/client/pkg/jsonmessage"
+
+	"github.com/thediveo/morbyd/v2/push"
 )
 
 // PushImage pushes a container image to a container registry.
@@ -34,11 +35,11 @@ func (s *Session) PushImage(ctx context.Context, image string, opts ...push.Opt)
 	if popts.Out == nil {
 		popts.Out = io.Discard
 	}
-	r, err := s.moby.ImagePush(ctx, image, popts.PushOptions)
+	r, err := s.moby.ImagePush(ctx, image, popts.ImagePushOptions)
 	if err != nil {
 		return fmt.Errorf("image push failed, reason: %w", err)
 	}
-	defer r.Close() //nolint:errcheck // any error is irrelevant at this point
-	err = jsonmessage.DisplayJSONMessagesStream(r, popts.Out, 0, false, nil)
+	defer func() { _ = r.Close() }()
+	err = jsonmessage.DisplayMessages(r.JSONMessages(ctx), popts.Out)
 	return err
 }

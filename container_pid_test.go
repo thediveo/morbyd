@@ -19,10 +19,12 @@ import (
 	"errors"
 	"time"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/thediveo/morbyd/run"
-	"github.com/thediveo/morbyd/session"
+	"github.com/moby/moby/api/types/container"
+	client "github.com/moby/moby/client"
 	mock "go.uber.org/mock/gomock"
+
+	"github.com/thediveo/morbyd/v2/run"
+	"github.com/thediveo/morbyd/v2/session"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -49,14 +51,10 @@ var _ = Describe("getting container PIDs", Ordered, func() {
 			})
 			rec := sess.Client().(*MockClient).EXPECT()
 
-			rec.ContainerInspect(Any, Any).Return(container.InspectResponse{
-				ContainerJSONBase: &container.ContainerJSONBase{},
-			}, nil)
-			rec.ContainerInspect(Any, Any).Return(container.InspectResponse{
-				ContainerJSONBase: &container.ContainerJSONBase{
-					State: &container.State{
-						Pid: 42,
-					},
+			rec.ContainerInspect(Any, Any, Any).Return(client.ContainerInspectResult{}, nil)
+			rec.ContainerInspect(Any, Any, Any).Return(client.ContainerInspectResult{
+				Container: container.InspectResponse{
+					State: &container.State{Pid: 42},
 				},
 			}, nil)
 
@@ -73,16 +71,16 @@ var _ = Describe("getting container PIDs", Ordered, func() {
 			})
 			rec := sess.Client().(*MockClient).EXPECT()
 
-			rec.ContainerInspect(Any, Any).Return(container.InspectResponse{
-				ContainerJSONBase: &container.ContainerJSONBase{
+			rec.ContainerInspect(Any, Any, Any).Return(client.ContainerInspectResult{
+				Container: container.InspectResponse{
 					State: &container.State{
 						Dead:       true,
 						Restarting: true,
 					},
 				},
 			}, nil)
-			rec.ContainerInspect(Any, Any).Return(container.InspectResponse{
-				ContainerJSONBase: &container.ContainerJSONBase{
+			rec.ContainerInspect(Any, Any, Any).Return(client.ContainerInspectResult{
+				Container: container.InspectResponse{
 					State: &container.State{
 						Pid: 42,
 					},
@@ -102,15 +100,11 @@ var _ = Describe("getting container PIDs", Ordered, func() {
 			})
 			rec := sess.Client().(*MockClient).EXPECT()
 
-			rec.ContainerInspect(Any, Any).Return(container.InspectResponse{
-				ContainerJSONBase: &container.ContainerJSONBase{},
+			rec.ContainerInspect(Any, Any, Any).Return(client.ContainerInspectResult{
+				Container: container.InspectResponse{State: &container.State{}},
 			}, nil)
-			rec.ContainerInspect(Any, Any).Return(container.InspectResponse{
-				ContainerJSONBase: &container.ContainerJSONBase{
-					State: &container.State{
-						OOMKilled: true,
-					},
-				},
+			rec.ContainerInspect(Any, Any, Any).Return(client.ContainerInspectResult{
+				Container: container.InspectResponse{State: &container.State{Dead: true}},
 			}, nil)
 
 			cntr := &Container{Session: sess, ID: "bad1dea"}
@@ -126,7 +120,7 @@ var _ = Describe("getting container PIDs", Ordered, func() {
 			})
 			rec := sess.Client().(*MockClient).EXPECT()
 
-			rec.ContainerInspect(Any, Any).Return(container.InspectResponse{}, errors.New("error IJK305I"))
+			rec.ContainerInspect(Any, Any, Any).Return(client.ContainerInspectResult{}, errors.New("error IJK305I"))
 
 			cntr := &Container{Session: sess, ID: "bad1dea"}
 			Expect(cntr.PID(ctx)).Error().To(HaveOccurred())
@@ -142,9 +136,7 @@ var _ = Describe("getting container PIDs", Ordered, func() {
 			rec := sess.Client().(*MockClient).EXPECT()
 
 			// Ignore the cancelled context so we can get to the short nap attack.
-			rec.ContainerInspect(Any, Any).Return(container.InspectResponse{
-				ContainerJSONBase: &container.ContainerJSONBase{},
-			}, nil)
+			rec.ContainerInspect(Any, Any, Any).Return(client.ContainerInspectResult{}, nil)
 			ctx, cancel := context.WithCancel(ctx)
 			cancel()
 

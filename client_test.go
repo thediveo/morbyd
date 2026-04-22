@@ -22,16 +22,11 @@ import (
 	"io"
 	"slices"
 
-	"github.com/docker/docker/api/types"
-	build "github.com/docker/docker/api/types/build"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/image"
-	"github.com/docker/docker/api/types/network"
-	dockerclient "github.com/docker/docker/client"
-	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/thediveo/morbyd/moby"
-	"github.com/thediveo/morbyd/session"
+	"github.com/moby/moby/client"
 	mock "go.uber.org/mock/gomock"
+
+	"github.com/thediveo/morbyd/v2/moby"
+	"github.com/thediveo/morbyd/v2/session"
 )
 
 // WithMockController wraps the Docker client in our mock, using the specified
@@ -60,180 +55,180 @@ func newWrappedClient(ctrl *mock.Controller, wrapped moby.Client, withouts []str
 
 	if !slices.Contains(withouts, "ContainerAttach") {
 		rec.ContainerAttach(Any, Any, Any).AnyTimes().
-			DoAndReturn(func(ctx context.Context, container string, options container.AttachOptions) (types.HijackedResponse, error) {
+			DoAndReturn(func(ctx context.Context, container string, options client.ContainerAttachOptions) (client.ContainerAttachResult, error) {
 				return wrapped.ContainerAttach(ctx, container, options)
 			})
 	}
 	if !slices.Contains(withouts, "ContainerCreate") {
-		rec.ContainerCreate(Any, Any, Any, Any, Any, Any).AnyTimes().
-			DoAndReturn(func(ctx context.Context, config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, platform *ocispec.Platform, containerName string) (container.CreateResponse, error) {
-				return wrapped.ContainerCreate(ctx, config, hostConfig, networkingConfig, platform, containerName)
+		rec.ContainerCreate(Any, Any).AnyTimes().
+			DoAndReturn(func(ctx context.Context, options client.ContainerCreateOptions) (client.ContainerCreateResult, error) {
+				return wrapped.ContainerCreate(ctx, options)
 			})
 	}
 	if !slices.Contains(withouts, "ContainerInspect") {
-		rec.ContainerInspect(Any, Any).AnyTimes().
-			DoAndReturn(func(ctx context.Context, containerID string) (container.InspectResponse, error) {
-				return wrapped.ContainerInspect(ctx, containerID)
+		rec.ContainerInspect(Any, Any, Any).AnyTimes().
+			DoAndReturn(func(ctx context.Context, containerID string, options client.ContainerInspectOptions) (client.ContainerInspectResult, error) {
+				return wrapped.ContainerInspect(ctx, containerID, options)
 			})
 	}
 	if !slices.Contains(withouts, "ContainerKill") {
 		rec.ContainerKill(Any, Any, Any).AnyTimes().
-			DoAndReturn(func(ctx context.Context, containerID, signal string) error {
-				return wrapped.ContainerKill(ctx, containerID, signal)
+			DoAndReturn(func(ctx context.Context, containerID string, options client.ContainerKillOptions) (client.ContainerKillResult, error) {
+				return wrapped.ContainerKill(ctx, containerID, options)
 			})
 	}
 	if !slices.Contains(withouts, "ContainerList") {
 		rec.ContainerList(Any, Any).AnyTimes().
-			DoAndReturn(func(ctx context.Context, options container.ListOptions) ([]container.Summary, error) {
+			DoAndReturn(func(ctx context.Context, options client.ContainerListOptions) (client.ContainerListResult, error) {
 				return wrapped.ContainerList(ctx, options)
 			})
 	}
 	if !slices.Contains(withouts, "ContainerPause") {
-		rec.ContainerPause(Any, Any).AnyTimes().
-			DoAndReturn(func(ctx context.Context, containerID string) error {
-				return wrapped.ContainerPause(ctx, containerID)
+		rec.ContainerPause(Any, Any, Any).AnyTimes().
+			DoAndReturn(func(ctx context.Context, containerID string, options client.ContainerPauseOptions) (client.ContainerPauseResult, error) {
+				return wrapped.ContainerPause(ctx, containerID, options)
 			})
 	}
 	if !slices.Contains(withouts, "ContainerRemove") {
 		rec.ContainerRemove(Any, Any, Any).AnyTimes().
-			DoAndReturn(func(ctx context.Context, containerID string, options container.RemoveOptions) error {
+			DoAndReturn(func(ctx context.Context, containerID string, options client.ContainerRemoveOptions) (client.ContainerRemoveResult, error) {
 				return wrapped.ContainerRemove(ctx, containerID, options)
 			})
 	}
 	if !slices.Contains(withouts, "ContainerRename") {
 		rec.ContainerRename(Any, Any, Any).AnyTimes().
-			DoAndReturn(func(ctx context.Context, containerID string, newcontainerID string) error {
-				return wrapped.ContainerRename(ctx, containerID, newcontainerID)
+			DoAndReturn(func(ctx context.Context, containerID string, options client.ContainerRenameOptions) (client.ContainerRenameResult, error) {
+				return wrapped.ContainerRename(ctx, containerID, options)
 			})
 	}
 	if !slices.Contains(withouts, "ContainerRestart") {
 		rec.ContainerRestart(Any, Any, Any).AnyTimes().
-			DoAndReturn(func(ctx context.Context, containerID string, options container.StopOptions) error {
+			DoAndReturn(func(ctx context.Context, containerID string, options client.ContainerRestartOptions) (client.ContainerRestartResult, error) {
 				return wrapped.ContainerRestart(ctx, containerID, options)
 			})
 	}
 	if !slices.Contains(withouts, "ContainerStart") {
 		rec.ContainerStart(Any, Any, Any).AnyTimes().
-			DoAndReturn(func(ctx context.Context, containerID string, options container.StartOptions) error {
+			DoAndReturn(func(ctx context.Context, containerID string, options client.ContainerStartOptions) (client.ContainerStartResult, error) {
 				return wrapped.ContainerStart(ctx, containerID, options)
 			})
 	}
 	if !slices.Contains(withouts, "ContainerStop") {
 		rec.ContainerStop(Any, Any, Any).AnyTimes().
-			DoAndReturn(func(ctx context.Context, containerID string, options container.StopOptions) error {
+			DoAndReturn(func(ctx context.Context, containerID string, options client.ContainerStopOptions) (client.ContainerStopResult, error) {
 				return wrapped.ContainerStop(ctx, containerID, options)
 			})
 	}
 	if !slices.Contains(withouts, "ContainerUnpause") {
-		rec.ContainerUnpause(Any, Any).AnyTimes().
-			DoAndReturn(func(ctx context.Context, containerID string) error {
-				return wrapped.ContainerUnpause(ctx, containerID)
+		rec.ContainerUnpause(Any, Any, Any).AnyTimes().
+			DoAndReturn(func(ctx context.Context, containerID string, options client.ContainerUnpauseOptions) (client.ContainerUnpauseResult, error) {
+				return wrapped.ContainerUnpause(ctx, containerID, options)
 			})
 	}
 	if !slices.Contains(withouts, "ContainerWait") {
 		rec.ContainerWait(Any, Any, Any).AnyTimes().
-			DoAndReturn(func(ctx context.Context, containerID string, condition container.WaitCondition) (<-chan container.WaitResponse, <-chan error) {
-				return wrapped.ContainerWait(ctx, containerID, condition)
+			DoAndReturn(func(ctx context.Context, containerID string, options client.ContainerWaitOptions) client.ContainerWaitResult {
+				return wrapped.ContainerWait(ctx, containerID, options)
 			})
 	}
 
-	if !slices.Contains(withouts, "ContainerExecCreate") {
-		rec.ContainerExecCreate(Any, Any, Any).AnyTimes().
-			DoAndReturn(func(ctx context.Context, container string, config container.ExecOptions) (container.ExecCreateResponse, error) {
-				return wrapped.ContainerExecCreate(ctx, container, config)
+	if !slices.Contains(withouts, "ExecAttach") {
+		rec.ExecAttach(Any, Any, Any).AnyTimes().
+			DoAndReturn(func(ctx context.Context, execID string, options client.ExecAttachOptions) (client.ExecAttachResult, error) {
+				return wrapped.ExecAttach(ctx, execID, options)
 			})
 	}
-	if !slices.Contains(withouts, "ContainerExecStart") {
-		rec.ContainerExecStart(Any, Any, Any).AnyTimes().
-			DoAndReturn(func(ctx context.Context, execID string, config container.ExecStartOptions) error {
-				return wrapped.ContainerExecStart(ctx, execID, config)
+	if !slices.Contains(withouts, "ExecCreate") {
+		rec.ExecCreate(Any, Any, Any).AnyTimes().
+			DoAndReturn(func(ctx context.Context, container string, options client.ExecCreateOptions) (client.ExecCreateResult, error) {
+				return wrapped.ExecCreate(ctx, container, options)
 			})
 	}
-	if !slices.Contains(withouts, "ContainerExecAttach") {
-		rec.ContainerExecAttach(Any, Any, Any).AnyTimes().
-			DoAndReturn(func(ctx context.Context, execID string, config container.ExecAttachOptions) (types.HijackedResponse, error) {
-				return wrapped.ContainerExecAttach(ctx, execID, config)
+	if !slices.Contains(withouts, "ExecStart") {
+		rec.ExecStart(Any, Any, Any).AnyTimes().
+			DoAndReturn(func(ctx context.Context, execID string, options client.ExecStartOptions) (client.ExecStartResult, error) {
+				return wrapped.ExecStart(ctx, execID, options)
 			})
 	}
-	if !slices.Contains(withouts, "ContainerExecInspect") {
-		rec.ContainerExecInspect(Any, Any).AnyTimes().
-			DoAndReturn(func(ctx context.Context, execID string) (container.ExecInspect, error) {
-				return wrapped.ContainerExecInspect(ctx, execID)
+	if !slices.Contains(withouts, "ExecInspect") {
+		rec.ExecInspect(Any, Any, Any).AnyTimes().
+			DoAndReturn(func(ctx context.Context, execID string, options client.ExecInspectOptions) (client.ExecInspectResult, error) {
+				return wrapped.ExecInspect(ctx, execID, options)
 			})
 	}
 
 	if !slices.Contains(withouts, "ImageBuild") {
 		rec.ImageBuild(Any, Any, Any).AnyTimes().
-			DoAndReturn(func(ctx context.Context, buildContext io.Reader, options build.ImageBuildOptions) (build.ImageBuildResponse, error) {
+			DoAndReturn(func(ctx context.Context, buildContext io.Reader, options client.ImageBuildOptions) (client.ImageBuildResult, error) {
 				return wrapped.ImageBuild(ctx, buildContext, options)
 			})
 	}
 	if !slices.Contains(withouts, "ImageInspect") {
 		rec.ImageInspect(Any, Any, Any).AnyTimes().
-			DoAndReturn(func(ctx context.Context, imageID string, inspectOpts ...dockerclient.ImageInspectOption) (image.InspectResponse, error) {
+			DoAndReturn(func(ctx context.Context, imageID string, inspectOpts ...client.ImageInspectOption) (client.ImageInspectResult, error) {
 				return wrapped.ImageInspect(ctx, imageID, inspectOpts...)
 			})
 	}
 	if !slices.Contains(withouts, "ImageList") {
 		rec.ImageList(Any, Any).AnyTimes().
-			DoAndReturn(func(ctx context.Context, options image.ListOptions) ([]image.Summary, error) {
+			DoAndReturn(func(ctx context.Context, options client.ImageListOptions) (client.ImageListResult, error) {
 				return wrapped.ImageList(ctx, options)
 			})
 	}
 	if !slices.Contains(withouts, "ImagePull") {
 		rec.ImagePull(Any, Any, Any).AnyTimes().
-			DoAndReturn(func(ctx context.Context, refStr string, options image.PullOptions) (io.ReadCloser, error) {
+			DoAndReturn(func(ctx context.Context, refStr string, options client.ImagePullOptions) (client.ImagePullResponse, error) {
 				return wrapped.ImagePull(ctx, refStr, options)
 			})
 	}
 	if !slices.Contains(withouts, "ImagePush") {
 		rec.ImagePush(Any, Any, Any).AnyTimes().
-			DoAndReturn(func(ctx context.Context, image string, options image.PushOptions) (io.ReadCloser, error) {
+			DoAndReturn(func(ctx context.Context, image string, options client.ImagePushOptions) (client.ImagePushResponse, error) {
 				return wrapped.ImagePush(ctx, image, options)
 			})
 	}
 	if !slices.Contains(withouts, "ImageRemove") {
 		rec.ImageRemove(Any, Any, Any).AnyTimes().
-			DoAndReturn(func(ctx context.Context, imageID string, options image.RemoveOptions) ([]image.DeleteResponse, error) {
+			DoAndReturn(func(ctx context.Context, imageID string, options client.ImageRemoveOptions) (client.ImageRemoveResult, error) {
 				return wrapped.ImageRemove(ctx, imageID, options)
 			})
 	}
 	if !slices.Contains(withouts, "ImageTag") {
-		rec.ImageTag(Any, Any, Any).AnyTimes().
-			DoAndReturn(func(ctx context.Context, source, target string) error {
-				return wrapped.ImageTag(ctx, source, target)
+		rec.ImageTag(Any, Any).AnyTimes().
+			DoAndReturn(func(ctx context.Context, options client.ImageTagOptions) (client.ImageTagResult, error) {
+				return wrapped.ImageTag(ctx, options)
 			})
 	}
 
 	if !slices.Contains(withouts, "NetworkCreate") {
 		rec.NetworkCreate(Any, Any, Any).AnyTimes().
-			DoAndReturn(func(ctx context.Context, name string, options network.CreateOptions) (network.CreateResponse, error) {
+			DoAndReturn(func(ctx context.Context, name string, options client.NetworkCreateOptions) (client.NetworkCreateResult, error) {
 				return wrapped.NetworkCreate(ctx, name, options)
 			})
 	}
 	if !slices.Contains(withouts, "NetworkInspect") {
 		rec.NetworkInspect(Any, Any, Any).AnyTimes().
-			DoAndReturn(func(ctx context.Context, networkID string, options network.InspectOptions) (network.Summary, error) {
+			DoAndReturn(func(ctx context.Context, networkID string, options client.NetworkInspectOptions) (client.NetworkInspectResult, error) {
 				return wrapped.NetworkInspect(ctx, networkID, options)
 			})
 	}
 	if !slices.Contains(withouts, "NetworkList") {
 		rec.NetworkList(Any, Any).AnyTimes().
-			DoAndReturn(func(ctx context.Context, options network.ListOptions) ([]network.Summary, error) {
+			DoAndReturn(func(ctx context.Context, options client.NetworkListOptions) (client.NetworkListResult, error) {
 				return wrapped.NetworkList(ctx, options)
 			})
 	}
 	if !slices.Contains(withouts, "NetworkRemove") {
-		rec.NetworkRemove(Any, Any).AnyTimes().
-			DoAndReturn(func(ctx context.Context, networkID string) error {
-				return wrapped.NetworkRemove(ctx, networkID)
+		rec.NetworkRemove(Any, Any, Any).AnyTimes().
+			DoAndReturn(func(ctx context.Context, networkID string, options client.NetworkRemoveOptions) (client.NetworkRemoveResult, error) {
+				return wrapped.NetworkRemove(ctx, networkID, options)
 			})
 	}
 
 	if !slices.Contains(withouts, "ServerVersion") {
-		rec.ServerVersion(Any).AnyTimes().
-			DoAndReturn(func(ctx context.Context, networkID string) (types.Version, error) {
-				return wrapped.ServerVersion(ctx)
+		rec.ServerVersion(Any, Any).AnyTimes().
+			DoAndReturn(func(ctx context.Context, options client.ServerVersionOptions) (client.ServerVersionResult, error) {
+				return wrapped.ServerVersion(ctx, options)
 			})
 	}
 

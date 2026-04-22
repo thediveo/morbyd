@@ -16,13 +16,16 @@ package net
 
 import (
 	"errors"
+	"net/netip"
 
-	"github.com/docker/docker/api/types/network"
-	"github.com/thediveo/morbyd/ipam"
+	"github.com/moby/moby/api/types/network"
+
+	"github.com/thediveo/morbyd/v2/ipam"
+
+	gs "github.com/onsi/gomega/gstruct"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	gs "github.com/onsi/gomega/gstruct"
 )
 
 var _ = Describe("network options", func() {
@@ -44,8 +47,8 @@ var _ = Describe("network options", func() {
 		Expect(netos.IPAM).To(gs.PointTo(Equal(network.IPAM{
 			Config: []network.IPAMConfig{
 				{
-					Subnet:  "0.0.1.0/24",
-					IPRange: "0.0.1.0/27",
+					Subnet:  netip.MustParsePrefix("0.0.1.0/24"),
+					IPRange: netip.MustParsePrefix("0.0.1.0/27"),
 				},
 			}})))
 		Expect(netos.Internal).To(BeTrue())

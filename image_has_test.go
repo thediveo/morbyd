@@ -20,7 +20,7 @@ import (
 	"time"
 
 	"github.com/containerd/errdefs"
-	image "github.com/docker/docker/api/types/image"
+	"github.com/moby/moby/client"
 	mock "go.uber.org/mock/gomock"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -51,8 +51,8 @@ var _ = Describe("image presence", Ordered, func() {
 				sess.Close(ctx)
 			})
 			rec := sess.Client().(*MockClient).EXPECT()
-			rec.ImageInspect(Any, Any).Return(image.InspectResponse{}, errdefs.ErrNotFound)
-			rec.ImageInspect(Any, Any).Return(image.InspectResponse{
+			rec.ImageInspect(Any, Any).Return(client.ImageInspectResult{}, errdefs.ErrNotFound)
+			rec.ImageInspect(Any, Any).Return(client.ImageInspectResult{
 				/*doesn't matter what, just needs to exist*/
 			}, nil)
 
@@ -68,7 +68,7 @@ var _ = Describe("image presence", Ordered, func() {
 				sess.Close(ctx)
 			})
 			rec := sess.Client().(*MockClient).EXPECT()
-			rec.ImageInspect(Any, Any).Return(image.InspectResponse{}, errors.New("error IJK305I"))
+			rec.ImageInspect(Any, Any).Return(client.ImageInspectResult{}, errors.New("error IJK305I"))
 
 			Expect(sess.HasImage(ctx, "busybox:absolutelygreatest")).Error().To(HaveOccurred())
 		})
