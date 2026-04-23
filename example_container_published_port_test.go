@@ -21,9 +21,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/thediveo/morbyd"
-	"github.com/thediveo/morbyd/run"
-	"github.com/thediveo/morbyd/session"
+	"github.com/thediveo/morbyd/v2"
+	"github.com/thediveo/morbyd/v2/run"
+	"github.com/thediveo/morbyd/v2/session"
 )
 
 // Run a container that publishes its http service on loopback and then query

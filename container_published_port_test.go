@@ -20,10 +20,10 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/thediveo/morbyd/net"
-	"github.com/thediveo/morbyd/run"
-	"github.com/thediveo/morbyd/session"
-	"github.com/thediveo/morbyd/timestamper"
+	"github.com/thediveo/morbyd/v2/net"
+	"github.com/thediveo/morbyd/v2/run"
+	"github.com/thediveo/morbyd/v2/session"
+	"github.com/thediveo/morbyd/v2/timestamper"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

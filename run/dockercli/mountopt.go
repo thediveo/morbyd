@@ -15,8 +15,8 @@ import (
 	"strconv"
 	"strings"
 
-	mounttypes "github.com/docker/docker/api/types/mount"
 	"github.com/docker/go-units"
+	mounttypes "github.com/moby/moby/api/types/mount"
 )
 
 // MountOpt is a Value type for parsing mounts

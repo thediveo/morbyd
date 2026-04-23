@@ -19,8 +19,9 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/docker/docker/pkg/jsonmessage"
-	"github.com/thediveo/morbyd/pull"
+	"github.com/moby/moby/client/pkg/jsonmessage"
+
+	"github.com/thediveo/morbyd/v2/pull"
 )
 
 // PullImage pulls a container image specified by the image reference, if not
@@ -32,20 +33,20 @@ import (
 //
 // Any pull process errors will be reported.
 func (s *Session) PullImage(ctx context.Context, imgref string, opts ...pull.Opt) error {
-	pios := pull.Options{}
+	piopts := pull.Options{}
 	for _, opt := range opts {
-		if err := opt(&pios); err != nil {
+		if err := opt(&piopts); err != nil {
 			return err
 		}
 	}
-	if pios.Out == nil {
-		pios.Out = io.Discard
+	if piopts.Out == nil {
+		piopts.Out = io.Discard
 	}
-	r, err := s.moby.ImagePull(ctx, imgref, pios.PullOptions)
+	r, err := s.moby.ImagePull(ctx, imgref, piopts.ImagePullOptions)
 	if err != nil {
 		return fmt.Errorf("image pull failed, reason: %w", err)
 	}
-	defer r.Close() //nolint:errcheck // any error is irrelevant at this point
-	err = jsonmessage.DisplayJSONMessagesStream(r, pios.Out, 0, false, nil)
+	defer func() { _ = r.Close() }()
+	err = jsonmessage.DisplayMessages(r.JSONMessages(ctx), piopts.Out)
 	return err
 }

@@ -22,13 +22,13 @@ import (
 	"strings"
 	"time"
 
-	dockerbuild "github.com/docker/docker/api/types/build"
-	image "github.com/docker/docker/api/types/image"
-	"github.com/thediveo/morbyd/build"
-	"github.com/thediveo/morbyd/run"
-	"github.com/thediveo/morbyd/safe"
-	"github.com/thediveo/morbyd/session"
+	"github.com/moby/moby/client"
 	mock "go.uber.org/mock/gomock"
+
+	"github.com/thediveo/morbyd/v2/build"
+	"github.com/thediveo/morbyd/v2/run"
+	"github.com/thediveo/morbyd/v2/session"
+	"github.com/thediveo/safe"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -103,7 +103,7 @@ var _ = Describe("build image", Ordered, func() {
 		It("builds an image using buildkit and finds the correct stage build output canary", func(ctx context.Context) {
 			const imageref = "morbyd/buzzybocks"
 
-			_, _ = sess.Client().ImageRemove(ctx, imageref, image.RemoveOptions{})
+			_, _ = sess.Client().ImageRemove(ctx, imageref, client.ImageRemoveOptions{})
 
 			// cache bustin' ... with LATIN LETTERS.
 			const oldLatinAlphabet = "ABCDEFGHIKLMNOPQRSTVX"
@@ -121,7 +121,7 @@ var _ = Describe("build image", Ordered, func() {
 			))
 			Expect(id).NotTo(BeEmpty())
 			Expect(sess.Client().ImageRemove(
-				ctx, imageref, image.RemoveOptions{})).Error().To(
+				ctx, imageref, client.ImageRemoveOptions{})).Error().To(
 				Succeed())
 			Expect(buff.String()).To(ContainSubstring(".." + hello.String() + ".."))
 		})
@@ -135,7 +135,7 @@ var _ = Describe("build image", Ordered, func() {
 			Expect(err).To(HaveOccurred())
 			Expect(id).To(BeEmpty())
 			Expect(sess.Client().ImageRemove(
-				ctx, imageref, image.RemoveOptions{})).Error().To(
+				ctx, imageref, client.ImageRemoveOptions{})).Error().To(
 				MatchError(ContainSubstring("from daemon: No such image: " + imageref)))
 		})
 
@@ -188,7 +188,7 @@ var _ = Describe("build image", Ordered, func() {
 {"aux":{"ID":""}}
 {"aux":{"ID":42}}
 `))
-		rec.ImageBuild(Any, Any, Any).Return(dockerbuild.ImageBuildResponse{Body: rc}, nil)
+		rec.ImageBuild(Any, Any, Any).Return(client.ImageBuildResult{Body: rc}, nil)
 
 		Expect(sess.BuildImage(ctx, "./_test/dockerignore")).To(Equal("foobar"))
 	})

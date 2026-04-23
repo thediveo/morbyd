@@ -19,12 +19,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/filters"
-	"github.com/docker/docker/api/types/network"
-	"github.com/docker/docker/client"
-	"github.com/thediveo/morbyd/moby"
-	"github.com/thediveo/morbyd/session"
+	"github.com/moby/moby/client"
+
+	"github.com/thediveo/morbyd/v2/moby"
+	"github.com/thediveo/morbyd/v2/session"
 )
 
 // Session represents a Docker API client connection, together with additional
@@ -55,9 +53,8 @@ func NewSession(ctx context.Context, opts ...session.Opt) (*Session, error) {
 	}
 	clientOpts := append([]client.Opt{
 		client.FromEnv,
-		client.WithAPIVersionNegotiation(),
 	}, s.opts.DockerClientOpts...)
-	moby, err := client.NewClientWithOpts(clientOpts...)
+	moby, err := client.New(clientOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -96,17 +93,17 @@ func (s *Session) autoClean(ctx context.Context, aclabel string) {
 	if value == "" {
 		aclabel = key // just the key, no trailing "=" in case of a zero value.
 	}
-	f := filters.NewArgs(filters.Arg("label", aclabel))
+	f := make(client.Filters).Add("label", aclabel)
 
 	// List all matching containers and then kill them.
-	cntrs, err := s.moby.ContainerList(ctx, container.ListOptions{
+	cntrs, err := s.moby.ContainerList(ctx, client.ContainerListOptions{
 		Filters: f,
 	})
 	if err != nil {
 		return
 	}
-	for _, cntr := range cntrs {
-		err := s.moby.ContainerRemove(ctx, cntr.ID, container.RemoveOptions{
+	for _, cntr := range cntrs.Items {
+		_, err := s.moby.ContainerRemove(ctx, cntr.ID, client.ContainerRemoveOptions{
 			Force:         true,
 			RemoveVolumes: true,
 		})
@@ -117,14 +114,14 @@ func (s *Session) autoClean(ctx context.Context, aclabel string) {
 
 	// List all matching networks (which by now should not have any test
 	// containers attached to them anymore) and then remove them.
-	nets, err := s.moby.NetworkList(ctx, network.ListOptions{
+	nets, err := s.moby.NetworkList(ctx, client.NetworkListOptions{
 		Filters: f,
 	})
 	if err != nil {
 		return
 	}
-	for _, net := range nets {
-		_ = s.moby.NetworkRemove(ctx, net.ID)
+	for _, net := range nets.Items {
+		_, _ = s.moby.NetworkRemove(ctx, net.ID, client.NetworkRemoveOptions{})
 	}
 }
 
@@ -133,13 +130,13 @@ func (s *Session) autoClean(ctx context.Context, aclabel string) {
 // the same name or ID will return different *Container objects, as there is no
 // caching.
 func (s *Session) Container(ctx context.Context, nameID string) (*Container, error) {
-	details, err := s.moby.ContainerInspect(ctx, nameID)
+	details, err := s.moby.ContainerInspect(ctx, nameID, client.ContainerInspectOptions{})
 	if err != nil {
 		return nil, err
 	}
 	cntr := &Container{
-		Name:    details.Name[1:],
-		ID:      details.ID,
+		Name:    details.Container.Name[1:],
+		ID:      details.Container.ID,
 		Session: s,
 		Details: details,
 	}
@@ -150,15 +147,15 @@ func (s *Session) Container(ctx context.Context, nameID string) (*Container, err
 // otherwise it returns an error. Please note that multiple calls for the same
 // name or ID will return different *Network objects, as there is no caching.
 func (s *Session) Network(ctx context.Context, nameID string) (*Network, error) {
-	details, err := s.moby.NetworkInspect(ctx, nameID, network.InspectOptions{
+	details, err := s.moby.NetworkInspect(ctx, nameID, client.NetworkInspectOptions{
 		Verbose: true,
 	})
 	if err != nil {
 		return nil, err
 	}
 	netw := &Network{
-		Name:    details.Name,
-		ID:      details.ID,
+		Name:    details.Network.Name,
+		ID:      details.Network.ID,
 		Session: s,
 		Details: details,
 	}
@@ -170,7 +167,7 @@ func (s *Session) Network(ctx context.Context, nameID string) (*Network, error) 
 // important in some situation, as containers managed by Docker Desktop cannot
 // be directly reached from the host, but always require ports to be published.
 func (s *Session) IsDockerDesktop(ctx context.Context) bool {
-	info, err := s.moby.ServerVersion(ctx)
+	info, err := s.moby.ServerVersion(ctx, client.ServerVersionOptions{})
 	if err != nil {
 		return false
 	}

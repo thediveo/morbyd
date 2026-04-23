@@ -17,30 +17,18 @@ package morbyd
 import (
 	"context"
 
-	"github.com/docker/docker/api/types/image"
+	"github.com/moby/moby/client"
+
+	"github.com/thediveo/morbyd/v2/remove"
 )
 
-// RemoveImageOpt is a configuration option to remove container image using
-// [Session.RemoveImage].
-type RemoveImageOpt func(*image.RemoveOptions)
-
 // RemoveImage removes a container image.
-func (s *Session) RemoveImage(ctx context.Context, imageid string, opts ...RemoveImageOpt) ([]image.DeleteResponse, error) {
-	rios := image.RemoveOptions{}
+func (s *Session) RemoveImage(ctx context.Context, imageid string, opts ...remove.Opt) (client.ImageRemoveResult, error) {
+	rios := remove.Options{}
 	for _, opt := range opts {
-		opt(&rios)
+		if err := opt(&rios); err != nil {
+			return client.ImageRemoveResult{}, err
+		}
 	}
-	return s.moby.ImageRemove(ctx, imageid, rios)
-}
-
-func WithForceRemoveImage() RemoveImageOpt {
-	return func(ro *image.RemoveOptions) {
-		ro.Force = true
-	}
-}
-
-func WithRemoveImagePruneChildren() RemoveImageOpt {
-	return func(ro *image.RemoveOptions) {
-		ro.PruneChildren = true
-	}
+	return s.moby.ImageRemove(ctx, imageid, rios.ImageRemoveOptions)
 }

@@ -16,8 +16,9 @@ package ipam
 
 import (
 	"errors"
+	"net/netip"
 
-	"github.com/docker/docker/api/types/network"
+	"github.com/moby/moby/api/types/network"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -45,16 +46,16 @@ var _ = Describe("ipam driver and pool options", func() {
 		Expect(ipamos.Driver).To(Equal("foobar"))
 		Expect(ipamos.Config).To(ConsistOf(
 			network.IPAMConfig{
-				Subnet:  "0.0.1.0/24",
-				IPRange: "0.0.1.0/27",
-				Gateway: "0.0.1.1",
-				AuxAddress: map[string]string{
-					"foo": "0.0.1.2",
-					"bar": "0.0.1.3",
+				Subnet:  netip.MustParsePrefix("0.0.1.0/24"),
+				IPRange: netip.MustParsePrefix("0.0.1.0/27"),
+				Gateway: netip.MustParseAddr("0.0.1.1"),
+				AuxAddress: map[string]netip.Addr{
+					"foo": netip.MustParseAddr("0.0.1.2"),
+					"bar": netip.MustParseAddr("0.0.1.3"),
 				},
 			},
 			network.IPAMConfig{
-				Subnet: "0.0.2.0/24",
+				Subnet: netip.MustParsePrefix("0.0.2.0/24"),
 			},
 		))
 		Expect(ipamos.Options).To(HaveLen(1))

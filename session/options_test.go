@@ -15,7 +15,8 @@
 package session
 
 import (
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/client"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )

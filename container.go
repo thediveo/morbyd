@@ -17,13 +17,13 @@ package morbyd
 import (
 	"context"
 	"fmt"
-	"net"
+	"net/netip"
 	"strconv"
 	"strings"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/network"
-	"github.com/docker/go-connections/nat"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/network"
+	"github.com/moby/moby/client"
 )
 
 // AbbreviatedIDLength defines the number of hex digits of a container ID to
@@ -44,13 +44,13 @@ type Container struct {
 	Name    string
 	ID      string
 	Session *Session
-	Details container.InspectResponse // inspection information after start.
+	Details client.ContainerInspectResult // inspection information after start.
 }
 
 // Refresh the details about this container, or return an error in case
 // refreshing fails.
 func (c *Container) Refresh(ctx context.Context) error {
-	details, err := c.Session.moby.ContainerInspect(ctx, c.ID)
+	details, err := c.Session.moby.ContainerInspect(ctx, c.ID, client.ContainerInspectOptions{})
 	if err != nil {
 		return fmt.Errorf("cannot refresh details of container %q/%s, reason: %w",
 			c.Name, c.AbbreviatedID(), err)
@@ -59,45 +59,48 @@ func (c *Container) Refresh(ctx context.Context) error {
 	return nil
 }
 
-// IP returns an IP address (net.IP) of this container that can be used to reach
-// the container from the host. If no suitable IP address can be found, IP
+// IP returns an IP address (netip.Addr) of this container that can be used to
+// reach the container from the host. If no suitable IP address can be found, IP
 // return nil. IP ignores addresses on a MACVLAN network, as IP addresses on a
 // MACVLAN network cannot reached from the host.
+//
+// IP returns a zero [netip.Addr] in case of errors, check with
+// [netip.Addr.IsValid].
 //
 // NOTE: the container's IP address is usable without the need to (publicly)
 // expose container ports on the host – which often is less than desirable in
 // tests. However, with Docker Desktop the container IPs aren't directly
 // reachable anymore as on plain Docker hosts, so in these cases you'll need to
 // expose a container's exposable ports on (preferably) loopback.
-func (c *Container) IP(ctx context.Context) net.IP {
+func (c *Container) IP(ctx context.Context) netip.Addr {
 	// The container's own list of networks it is attached to unfortunately
 	// doesn't tell us what the driver is. However, we need to know in order to
 	// correctly skip MACVLANs...
-	for _, netw := range c.Details.NetworkSettings.Networks {
-		details, err := c.Session.moby.NetworkInspect(ctx, netw.NetworkID, network.InspectOptions{
+	for _, netw := range c.Details.Container.NetworkSettings.Networks {
+		details, err := c.Session.moby.NetworkInspect(ctx, netw.NetworkID, client.NetworkInspectOptions{
 			Verbose: true,
 		})
 		if err != nil {
 			continue
 		}
-		switch details.Driver {
+		switch details.Network.Driver {
 		case "macvlan":
 			continue
 		case "host":
 			// Note that a container with "net:host" cannot be connected to any
 			// other network, so this is a sufficient response.
-			return net.ParseIP("127.0.0.1")
+			return netip.MustParseAddr("127.0.0.1")
 		case "null": // a.k.a. "net:none"
 			// Note that a container with "net:none" (lo only) cannot be
 			// connected to any other network, so this is a sufficient response.
-			return nil
+			return netip.Addr{}
 		}
-		if netw.IPAddress == "" {
+		if netw.IPAddress.IsUnspecified() {
 			continue
 		}
-		return net.ParseIP(netw.IPAddress)
+		return netw.IPAddress
 	}
-	return nil
+	return netip.Addr{}
 }
 
 // PID of the initial container process, as seen by the container engine. In
@@ -109,23 +112,22 @@ func (c *Container) IP(ctx context.Context) net.IP {
 // in its own PID namespace in the same HyperV Linux VM.
 func (c *Container) PID(ctx context.Context) (int, error) {
 	for {
-		inspRes, err := c.Session.moby.ContainerInspect(ctx, c.ID)
+		inspRes, err := c.Session.moby.ContainerInspect(ctx, c.ID, client.ContainerInspectOptions{})
 		if err != nil {
 			return 0, fmt.Errorf("cannot determine PID of container %s/%q, reason: %w",
 				c.Name, c.AbbreviatedID(), err)
 		}
+		state := inspRes.Container.State
 		// If we got a non-zero PID, then no worries and we just return that.
-		if inspRes.State != nil && inspRes.State.Pid != 0 {
-			return inspRes.State.Pid, nil
+		if state != nil && state.Pid != 0 {
+			return inspRes.Container.State.Pid, nil
 		}
 		// We're either too early or too late, but we have to figure out which
 		// one we're, because we don't want to hang around any further if there
 		// is no chance of getting a PID in the near future...
-		if inspRes.State != nil &&
-			((inspRes.State.Dead || inspRes.State.OOMKilled) &&
-				!inspRes.State.Restarting) {
+		if state != nil && ((state.Dead || state.OOMKilled) && !state.Restarting) {
 			return 0, fmt.Errorf("cannot determine PID of container %s/%q in state %q",
-				c.Name, c.AbbreviatedID(), inspRes.State.Status)
+				c.Name, c.AbbreviatedID(), state.Status)
 		}
 		if err := Sleep(ctx, DefaultSleep); err != nil {
 			return 0, fmt.Errorf("cannot determine PID of container %s/%q, reason: %w",
@@ -134,20 +136,22 @@ func (c *Container) PID(ctx context.Context) (int, error) {
 	}
 }
 
+func errOnly[V any](_ V, err error) error { return err }
+
 // Pause the container.
 func (c *Container) Pause(ctx context.Context) error {
-	return c.Session.moby.ContainerPause(ctx, c.ID)
+	return errOnly(c.Session.moby.ContainerPause(ctx, c.ID, client.ContainerPauseOptions{}))
 }
 
 // Unpause the container.
 func (c *Container) Unpause(ctx context.Context) error {
-	return c.Session.moby.ContainerUnpause(ctx, c.ID)
+	return errOnly(c.Session.moby.ContainerUnpause(ctx, c.ID, client.ContainerUnpauseOptions{}))
 }
 
 // Stop the container by sending it a termination signal. Default is SIGTERM,
 // unless changed using [run.WithStopSignal].
 func (c *Container) Stop(ctx context.Context) {
-	_ = c.Session.moby.ContainerStop(ctx, c.ID, container.StopOptions{})
+	_ = errOnly(c.Session.moby.ContainerStop(ctx, c.ID, client.ContainerStopOptions{}))
 }
 
 // Wait for the container to finish, that is, become “not-running” in Docker API
@@ -158,19 +162,19 @@ func (c *Container) Wait(ctx context.Context) error {
 	// Nota bene: errch is buffered with size 1. The wait result channel is
 	// unbuffered though. ContainerWait EITHER sends an error OR a result, never
 	// both. And in consequence it never sends a nil error.
-	waitch, errch := c.Session.moby.ContainerWait(ctx, c.ID, container.WaitConditionNotRunning)
+	result := c.Session.moby.ContainerWait(ctx, c.ID, client.ContainerWaitOptions{Condition: container.WaitConditionNotRunning})
 	select {
-	case err := <-errch:
+	case err := <-result.Error:
 		return fmt.Errorf("waiting for container %q/%s to finish failed, reason: %w",
 			c.Name, c.AbbreviatedID(), err)
-	case <-waitch:
+	case <-result.Result:
 		return nil
 	}
 }
 
 // Kill the container forcefully and also remove its volumes.
 func (c *Container) Kill(ctx context.Context) {
-	_ = c.Session.moby.ContainerRemove(ctx, c.ID, container.RemoveOptions{
+	_, _ = c.Session.moby.ContainerRemove(ctx, c.ID, client.ContainerRemoveOptions{
 		RemoveVolumes: true,
 		Force:         true,
 	})
@@ -199,31 +203,28 @@ func (c *Container) AbbreviatedID() string {
 //	// for instance, returns "127.0.0.1:32890"
 //	svcAddrPort := cntr.PublishedPort("1234").Any().UnspecifiedAsLoopback().String()
 func (c *Container) PublishedPort(portproto string) Addrs {
-	if !strings.Contains(portproto, "/") {
-		portproto += "/tcp"
+	pp, err := network.ParsePort(portproto)
+	if err != nil {
+		return nil
 	}
 	_, l4proto, _ := strings.Cut(portproto, "/")
+	if l4proto == "" {
+		l4proto = "tcp"
+	}
 	addrs := Addrs{}
-	for _, boundport := range c.Details.NetworkSettings.Ports[nat.Port(portproto)] {
-		ip := net.ParseIP(boundport.HostIP)
-		if ip == nil {
-			continue
-		}
-		if ip4 := ip.To4(); ip4 != nil {
-			ip = ip4 // compact IPv4 addresses
-		}
+	for _, boundport := range c.Details.Container.NetworkSettings.Ports[pp] {
 		port, err := strconv.ParseUint(boundport.HostPort, 10, 16)
 		if err != nil {
 			continue
 		}
-		addrs = append(addrs, NewAddr(ip, uint16(port), l4proto))
+		addrs = append(addrs, NewAddr(netip.AddrPortFrom(boundport.HostIP, uint16(port)), l4proto))
 	}
 	return addrs
 }
 
 // Rename this container to the passed-in new name.
 func (c *Container) Rename(ctx context.Context, newname string) error {
-	err := c.Session.moby.ContainerRename(ctx, c.ID, newname)
+	_, err := c.Session.moby.ContainerRename(ctx, c.ID, client.ContainerRenameOptions{NewName: newname})
 	if err != nil {
 		return err
 	}

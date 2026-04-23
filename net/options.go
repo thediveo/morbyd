@@ -15,11 +15,12 @@
 package net
 
 import (
-	"github.com/docker/docker/api/types/network"
-	"github.com/thediveo/morbyd/internal/ipamint"
-	"github.com/thediveo/morbyd/internal/netint"
-	"github.com/thediveo/morbyd/ipam"
-	lbls "github.com/thediveo/morbyd/labels"
+	"github.com/moby/moby/api/types/network"
+	"github.com/moby/moby/client"
+
+	"github.com/thediveo/morbyd/v2/internal/ensure"
+	"github.com/thediveo/morbyd/v2/ipam"
+	lbls "github.com/thediveo/morbyd/v2/labels"
 )
 
 // Opt is a configuration option when creating a custom Docker network using
@@ -28,7 +29,7 @@ type Opt func(*Options) error
 
 // Options represents the configuration options when creating a custom Docker
 // network, including [ipam] configuration options.
-type Options network.CreateOptions
+type Options client.NetworkCreateOptions
 
 // WithDriver specifies the network driver (plugin) to use when creating a new
 // Docker network. If left unspecified, it automatically defaults to Docker's
@@ -40,12 +41,24 @@ func WithDriver(name string) Opt {
 	}
 }
 
+// makeIPAM returns a new IPAM configuration object, with the supplied
+// IPAM-related options applied.
+func makeIPAM(opts ...ipam.IPAMOpt) (ipam.IPAM, error) {
+	d := ipam.IPAM{}
+	for _, opt := range opts {
+		if err := opt(&d); err != nil {
+			return ipam.IPAM{}, err
+		}
+	}
+	return d, nil
+}
+
 // WithIPAM specifies the particular IPAM driver configuration to use for
 // allocating IP addresses to containers getting attached to this network. See
 // also [ipam.Driver].
 func WithIPAM(opts ...ipam.IPAMOpt) Opt {
 	return func(o *Options) error {
-		drv, err := ipamint.MakeIPAM(opts...)
+		drv, err := makeIPAM(opts...)
 		if err != nil {
 			return err
 		}
@@ -83,7 +96,7 @@ func WithoutIPv6() Opt {
 // WithLabel adds a label in “KEY=VALUE” to the custom Docker network.
 func WithLabel(label string) Opt {
 	return func(o *Options) error {
-		netint.EnsureLabelsMap((*network.CreateOptions)(o))
+		ensure.Map(&o.Labels)
 		return lbls.Labels(o.Labels).Add(label)
 	}
 }
@@ -91,7 +104,7 @@ func WithLabel(label string) Opt {
 // WithLabels adds multiple key-value labels to Docker network.
 func WithLabels(labels ...string) Opt {
 	return func(o *Options) error {
-		netint.EnsureLabelsMap((*network.CreateOptions)(o))
+		ensure.Map(&o.Labels)
 		for _, label := range labels {
 			if err := lbls.Labels(o.Labels).Add(label); err != nil {
 				return err
@@ -104,7 +117,7 @@ func WithLabels(labels ...string) Opt {
 // WithOption adds a driver option in “KEY=VALUE” format.
 func WithOption(opt string) Opt {
 	return func(o *Options) error {
-		netint.EnsureOptionsMap((*network.CreateOptions)(o))
+		ensure.Map(&o.Options)
 		return lbls.Labels(o.Options).Add(opt)
 	}
 }

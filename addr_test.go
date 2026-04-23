@@ -15,7 +15,7 @@
 package morbyd
 
 import (
-	"net"
+	"net/netip"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -27,21 +27,21 @@ var _ = Describe("addresses", func() {
 
 		It("returns the transport protocol network the address is on", func() {
 			Expect(Addr{}.Network()).To(BeEmpty())
-			Expect(NewAddr(net.ParseIP("127.0.0.1"), 1234, "tcp").Network()).To(Equal("tcp"))
+			Expect(NewAddr(netip.MustParseAddrPort("127.0.0.1:1234"), "tcp").Network()).To(Equal("tcp"))
 		})
 
 		It("returns the stringified address", func() {
 			Expect(Addr{}.String()).To(BeEmpty())
-			Expect(NewAddr(net.ParseIP("127.0.0.1"), 1234, "tcp").String()).To(Equal("127.0.0.1:1234"))
-			Expect(NewAddr(net.ParseIP("fe80::dead:beef"), 1234, "udp").String()).To(Equal("[fe80::dead:beef]:1234"))
+			Expect(NewAddr(netip.MustParseAddrPort("127.0.0.1:1234"), "tcp").String()).To(Equal("127.0.0.1:1234"))
+			Expect(NewAddr(netip.MustParseAddrPort("[fe80::dead:beef]:1234"), "udp").String()).To(Equal("[fe80::dead:beef]:1234"))
 		})
 
 		It("uses loopback instead of unspecified", func() {
 			Expect(Addr{}.UnspecifiedAsLoopback().String()).To(BeEmpty())
-			Expect(NewAddr(net.ParseIP("127.0.0.1"), 1234, "tcp").UnspecifiedAsLoopback().String()).To(Equal("127.0.0.1:1234"))
-			Expect(NewAddr(net.ParseIP("fe80::dead:beef"), 1234, "udp").UnspecifiedAsLoopback().String()).To(Equal("[fe80::dead:beef]:1234"))
-			Expect(NewAddr(net.ParseIP("0.0.0.0"), 1234, "tcp").UnspecifiedAsLoopback().String()).To(Equal("127.0.0.1:1234"))
-			Expect(NewAddr(net.ParseIP("::1"), 1234, "udp").UnspecifiedAsLoopback().String()).To(Equal("[::1]:1234"))
+			Expect(NewAddr(netip.MustParseAddrPort("127.0.0.1:1234"), "tcp").UnspecifiedAsLoopback().String()).To(Equal("127.0.0.1:1234"))
+			Expect(NewAddr(netip.MustParseAddrPort("[fe80::dead:beef]:1234"), "udp").UnspecifiedAsLoopback().String()).To(Equal("[fe80::dead:beef]:1234"))
+			Expect(NewAddr(netip.MustParseAddrPort("0.0.0.0:1234"), "tcp").UnspecifiedAsLoopback().String()).To(Equal("127.0.0.1:1234"))
+			Expect(NewAddr(netip.MustParseAddrPort("[::1]:1234"), "udp").UnspecifiedAsLoopback().String()).To(Equal("[::1]:1234"))
 		})
 
 	})
@@ -55,9 +55,9 @@ var _ = Describe("addresses", func() {
 
 		It("returns always the first address element from a list", func() {
 			addrs := Addrs{
-				NewAddr(net.ParseIP("::"), 1234, "tcp"),
-				NewAddr(net.ParseIP("0.0.0.0"), 1234, "tcp"),
-				NewAddr(net.ParseIP("127.0.0.1"), 4567, "tcp"),
+				NewAddr(netip.MustParseAddrPort("[::]:1234"), "tcp"),
+				NewAddr(netip.MustParseAddrPort("0.0.0.0:1234"), "tcp"),
+				NewAddr(netip.MustParseAddrPort("127.0.0.1:4567"), "tcp"),
 			}
 			for range 10 {
 				Expect(addrs.First().String()).To(Equal("[::]:1234"))
@@ -66,9 +66,9 @@ var _ = Describe("addresses", func() {
 
 		It("returns a random address element from a list", func() {
 			addrs := Addrs{
-				NewAddr(net.ParseIP("::"), 1234, "tcp"),
-				NewAddr(net.ParseIP("0.0.0.0"), 1234, "tcp"),
-				NewAddr(net.ParseIP("127.0.0.1"), 4567, "tcp"),
+				NewAddr(netip.MustParseAddrPort("[::]:1234"), "tcp"),
+				NewAddr(netip.MustParseAddrPort("0.0.0.0:1234"), "tcp"),
+				NewAddr(netip.MustParseAddrPort("127.0.0.1:4567"), "tcp"),
 			}
 			counts := map[string]int{}
 			for range 100 {

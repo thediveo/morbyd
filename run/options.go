@@ -18,25 +18,25 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"net/netip"
 	"path/filepath"
 	"strconv"
 	"strings"
 
-	"golang.org/x/exp/maps"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/mount"
+	"github.com/moby/moby/api/types/network"
+	"github.com/moby/moby/client"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/mount"
-	"github.com/docker/docker/api/types/network"
-	"github.com/docker/docker/api/types/strslice"
-	"github.com/docker/go-connections/nat"
-	"github.com/thediveo/morbyd/identity"
-	lbls "github.com/thediveo/morbyd/labels"
-	"github.com/thediveo/morbyd/run/dockercli"
-	"github.com/thediveo/morbyd/strukt"
+	"github.com/thediveo/morbyd/v2/identity"
+	"github.com/thediveo/morbyd/v2/internal/ensure"
+	lbls "github.com/thediveo/morbyd/v2/labels"
+	"github.com/thediveo/morbyd/v2/run/dockercli"
+	"github.com/thediveo/morbyd/v2/strukt"
 )
 
 // Opt is a configuration option to run a container using
-// [github.com/thediveo/morbyd.Session.Run]. Please see also [Options] for
+// [github.com/thediveo/morbyd/v2.Session.Run]. Please see also [Options] for
 // more information.
 type Opt func(*Options) error
 
@@ -55,13 +55,10 @@ type Opt func(*Options) error
 //     an API option that still is unknown to as what exactly it does during
 //     container creation...
 type Options struct {
-	Name string
+	Opts client.ContainerCreateOptions
 	In   io.Reader
 	Out  io.Writer
 	Err  io.Writer
-	Conf container.Config
-	Host container.HostConfig
-	Net  network.NetworkingConfig
 }
 
 // WithCombinedOutput sends the container's stdout and stderr to the specified
@@ -73,6 +70,7 @@ type Options struct {
 // stream.
 func WithCombinedOutput(w io.Writer) Opt {
 	return func(o *Options) error {
+		ensure.Value(&o.Opts.Config)
 		o.Out = w
 		o.Err = w
 		return nil
@@ -87,7 +85,8 @@ func WithCombinedOutput(w io.Writer) Opt {
 // thus for us) to demultiplex this output sludge after the fact.
 func WithDemuxedOutput(out io.Writer, err io.Writer) Opt {
 	return func(o *Options) error {
-		o.Conf.Tty = false
+		ensure.Value(&o.Opts.Config)
+		o.Opts.Config.Tty = false
 		o.Out = out
 		o.Err = err
 		return nil
@@ -99,8 +98,9 @@ func WithDemuxedOutput(out io.Writer, err io.Writer) Opt {
 // then attaches to this stdin after creation.
 func WithInput(r io.Reader) Opt {
 	return func(o *Options) error {
-		o.Conf.OpenStdin = true
-		o.Conf.StdinOnce = true
+		ensure.Value(&o.Opts.Config)
+		o.Opts.Config.OpenStdin = true
+		o.Opts.Config.StdinOnce = true
 		o.In = r
 		return nil
 	}
@@ -109,7 +109,7 @@ func WithInput(r io.Reader) Opt {
 // WithName sets the optional name of the container to create.
 func WithName(name string) Opt {
 	return func(o *Options) error {
-		o.Name = name
+		o.Opts.Name = name
 		return nil
 	}
 }
@@ -117,7 +117,8 @@ func WithName(name string) Opt {
 // WithCommand sets the optional command to execute at container start.
 func WithCommand(cmd ...string) Opt {
 	return func(o *Options) error {
-		o.Conf.Cmd = strslice.StrSlice(cmd)
+		ensure.Value(&o.Opts.Config)
+		o.Opts.Config.Cmd = cmd
 		return nil
 	}
 }
@@ -126,7 +127,8 @@ func WithCommand(cmd ...string) Opt {
 // started.
 func WithEnvVars(vars ...string) Opt {
 	return func(o *Options) error {
-		o.Conf.Env = append(o.Conf.Env, vars...)
+		ensure.Value(&o.Opts.Config)
+		o.Opts.Config.Env = append(o.Opts.Config.Env, vars...)
 		return nil
 	}
 }
@@ -135,7 +137,8 @@ func WithEnvVars(vars ...string) Opt {
 // new container.
 func ClearLabels() Opt {
 	return func(o *Options) error {
-		maps.Clear(o.Conf.Labels)
+		ensure.Value(&o.Opts.Config)
+		clear(o.Opts.Config.Labels)
 		return nil
 	}
 }
@@ -144,7 +147,7 @@ func ClearLabels() Opt {
 func WithLabel(label string) Opt {
 	return func(o *Options) error {
 		ensureLabelsMap(o)
-		return lbls.Labels(o.Conf.Labels).Add(label)
+		return lbls.Labels(o.Opts.Config.Labels).Add(label)
 	}
 }
 
@@ -154,7 +157,7 @@ func WithLabels(labels ...string) Opt {
 	return func(o *Options) error {
 		ensureLabelsMap(o)
 		for _, label := range labels {
-			if err := lbls.Labels(o.Conf.Labels).Add(label); err != nil {
+			if err := lbls.Labels(o.Opts.Config.Labels).Add(label); err != nil {
 				return err
 			}
 		}
@@ -163,17 +166,16 @@ func WithLabels(labels ...string) Opt {
 }
 
 func ensureLabelsMap(o *Options) {
-	if o.Conf.Labels != nil {
-		return
-	}
-	o.Conf.Labels = map[string]string{}
+	ensure.Value(&o.Opts.Config)
+	ensure.Map(&o.Opts.Config.Labels)
 }
 
 // WithStopSignal sets the name of the signal to be sent to its initial process
 // when stopping the container.
 func WithStopSignal(s string) Opt {
 	return func(o *Options) error {
-		o.Conf.StopSignal = s
+		ensure.Value(&o.Opts.Config)
+		o.Opts.Config.StopSignal = s
 		return nil
 	}
 }
@@ -181,7 +183,8 @@ func WithStopSignal(s string) Opt {
 // WithStopTimeout sets the timeout (in seconds) to stop the container.
 func WithStopTimeout(secs int) Opt {
 	return func(o *Options) error {
-		o.Conf.StopTimeout = &secs
+		ensure.Value(&o.Opts.Config)
+		o.Opts.Config.StopTimeout = &secs
 		return nil
 	}
 }
@@ -198,7 +201,8 @@ func WithStopTimeout(secs int) Opt {
 // When WithTTY is used before [WithDemuxedOutput], it'll become ineffective.
 func WithTTY() Opt {
 	return func(o *Options) error {
-		o.Conf.Tty = true
+		ensure.Value(&o.Opts.Config)
+		o.Opts.Config.Tty = true
 		return nil
 	}
 }
@@ -206,7 +210,8 @@ func WithTTY() Opt {
 // WithAutoRemove removes the container after it has stopped.
 func WithAutoRemove() Opt {
 	return func(o *Options) error {
-		o.Host.AutoRemove = true
+		ensure.Value(&o.Opts.HostConfig)
+		o.Opts.HostConfig.AutoRemove = true
 		return nil
 	}
 }
@@ -215,7 +220,8 @@ func WithAutoRemove() Opt {
 // and not masking out certain filesystem elements.
 func WithPrivileged() Opt {
 	return func(o *Options) error {
-		o.Host.Privileged = true
+		ensure.Value(&o.Opts.HostConfig)
+		o.Opts.HostConfig.Privileged = true
 		return nil
 	}
 }
@@ -224,7 +230,8 @@ func WithPrivileged() Opt {
 // the container.
 func WithCapAdd(cap string) Opt {
 	return func(o *Options) error {
-		o.Host.CapAdd = append(o.Host.CapAdd, cap)
+		ensure.Value(&o.Opts.HostConfig)
+		o.Opts.HostConfig.CapAdd = append(o.Opts.HostConfig.CapAdd, cap)
 		return nil
 	}
 }
@@ -238,7 +245,8 @@ func WithCapAdd(cap string) Opt {
 // behavior. Drop them all, or drop none.
 func WithCapDropAll() Opt {
 	return func(o *Options) error {
-		o.Host.CapDrop = strslice.StrSlice{"ALL"}
+		ensure.Value(&o.Opts.HostConfig)
+		o.Opts.HostConfig.CapDrop = []string{"ALL"}
 		return nil
 	}
 }
@@ -248,7 +256,8 @@ func WithCapDropAll() Opt {
 // configuration, “private”, or “host”.
 func WithCgroupnsMode(mode string) Opt {
 	return func(o *Options) error {
-		o.Host.CgroupnsMode = container.CgroupnsMode(mode)
+		ensure.Value(&o.Opts.HostConfig)
+		o.Opts.HostConfig.CgroupnsMode = container.CgroupnsMode(mode)
 		return nil
 	}
 }
@@ -259,7 +268,8 @@ func WithCgroupnsMode(mode string) Opt {
 // container:NAMEID”.
 func WithIPCMode(mode string) Opt {
 	return func(o *Options) error {
-		o.Host.IpcMode = container.IpcMode(mode)
+		ensure.Value(&o.Opts.HostConfig)
+		o.Opts.HostConfig.IpcMode = container.IpcMode(mode)
 		return nil
 	}
 }
@@ -269,7 +279,8 @@ func WithIPCMode(mode string) Opt {
 // container:NAMEID”.
 func WithNetworkMode(mode string) Opt {
 	return func(o *Options) error {
-		o.Host.NetworkMode = container.NetworkMode(mode)
+		ensure.Value(&o.Opts.HostConfig)
+		o.Opts.HostConfig.NetworkMode = container.NetworkMode(mode)
 		return nil
 	}
 }
@@ -279,7 +290,8 @@ func WithNetworkMode(mode string) Opt {
 // container:NAMEID”.
 func WithPIDMode(mode string) Opt {
 	return func(o *Options) error {
-		o.Host.PidMode = container.PidMode(mode)
+		ensure.Value(&o.Opts.HostConfig)
+		o.Opts.HostConfig.PidMode = container.PidMode(mode)
 		return nil
 	}
 }
@@ -314,29 +326,31 @@ func WithPublishedPort(mapping string) Opt {
 		if err != nil {
 			return err
 		}
+		ensure.Value(&o.Opts.Config)
+		ensure.Value(&o.Opts.HostConfig)
 		// ouch, we need to set also ExposedPorts, otherwise the PortBindings
 		// get ignored.
-		if o.Conf.ExposedPorts == nil {
-			o.Conf.ExposedPorts = nat.PortSet{}
+		if o.Opts.Config.ExposedPorts == nil {
+			o.Opts.Config.ExposedPorts = network.PortSet{}
 		}
-		if o.Host.PortBindings == nil {
-			o.Host.PortBindings = nat.PortMap{}
+		if o.Opts.HostConfig.PortBindings == nil {
+			o.Opts.HostConfig.PortBindings = network.PortMap{}
 		}
-		portProto := fmt.Sprintf("%d/%s", cntrPort, l4proto)
-		var ip string
-		if bindIP != nil {
-			ip = bindIP.String()
+		portProtoText := fmt.Sprintf("%d/%s", cntrPort, l4proto)
+		portProto, err := network.ParsePort(portProtoText)
+		if err != nil {
+			return err
 		}
-		o.Conf.ExposedPorts[nat.Port(portProto)] = struct{}{}
-		o.Host.PortBindings[nat.Port(portProto)] = append(o.Host.PortBindings[nat.Port(portProto)], nat.PortBinding{
-			HostIP:   ip,
+		o.Opts.Config.ExposedPorts[portProto] = struct{}{}
+		o.Opts.HostConfig.PortBindings[portProto] = append(o.Opts.HostConfig.PortBindings[portProto], network.PortBinding{
+			HostIP:   bindIP,
 			HostPort: strconv.FormatUint(uint64(hostPort), 10),
 		})
 		return nil
 	}
 }
 
-func parsePortMapping(mapping string) (bindIP net.IP, hostPort uint16, cntrPort uint16, l4proto string, err error) {
+func parsePortMapping(mapping string) (bindIP netip.Addr, hostPort uint16, cntrPort uint16, l4proto string, err error) {
 	// Split off the optional transport protocol protocol name and default
 	// to "tcp" if not specified.
 	addrsports, l4proto, _ := strings.Cut(mapping, "/")
@@ -345,6 +359,7 @@ func parsePortMapping(mapping string) (bindIP net.IP, hostPort uint16, cntrPort 
 	}
 	// Strip off the IPv6 address, if present, before we proceed to chop the
 	// mapping into pieces.
+	hasBindIP := false
 	if strings.HasPrefix(addrsports, "[") {
 		var ip string
 		var ok bool
@@ -352,25 +367,23 @@ func parsePortMapping(mapping string) (bindIP net.IP, hostPort uint16, cntrPort 
 		if !ok {
 			return reportPortMappingError(mapping)
 		}
-		bindIP = net.ParseIP(ip[1:])
-		if bindIP == nil {
+		bindIP, err = netip.ParseAddr(ip[1:])
+		if err != nil {
 			return reportPortMappingError(mapping)
 		}
+		hasBindIP = true
 	}
 	// Now chop the mapping into at most three fields, or at most two fields
 	// we had already just chopped off the IPv6 address.
 	fields := strings.Split(addrsports, ":")
-	if len(fields) > 3 || (bindIP != nil && len(fields) > 2) {
+	if len(fields) > 3 || (hasBindIP && len(fields) > 2) {
 		return reportPortMappingError(mapping)
 	}
 	// Does the first field look like an IPv4 address in case we hadn't already
 	// an IPv6 address?
-	if bindIP == nil {
-		bindIP = net.ParseIP(fields[0])
-		if bindIP != nil {
-			if ipv4 := bindIP.To4(); ipv4 != nil {
-				bindIP = ipv4
-			}
+	if !hasBindIP {
+		bindIP, err = netip.ParseAddr(fields[0])
+		if err == nil {
 			fields = fields[1:]
 		}
 	}
@@ -390,8 +403,8 @@ func parsePortMapping(mapping string) (bindIP net.IP, hostPort uint16, cntrPort 
 	return // sic!
 }
 
-func reportPortMappingError(mapping string) (bindIP net.IP, hostPort uint16, cntrPort uint16, l4proto string, err error) {
-	return nil, 0, 0, "", fmt.Errorf("invalid port publishing mapping, expected [HOSTIP:][HOSTPORT:]CONTAINERPORT[/L4PROTO], got: %s",
+func reportPortMappingError(mapping string) (bindIP netip.Addr, hostPort uint16, cntrPort uint16, l4proto string, err error) {
+	return netip.Addr{}, 0, 0, "", fmt.Errorf("invalid port publishing mapping, expected [HOSTIP:][HOSTPORT:]CONTAINERPORT[/L4PROTO], got: %s",
 		mapping)
 }
 
@@ -419,10 +432,11 @@ func WithVolume(vol string) Opt {
 		// Anonymous volumes are still handled via the Volumes configuration API
 		// field.
 		return func(o *Options) error {
-			if o.Conf.Volumes == nil {
-				o.Conf.Volumes = map[string]struct{}{}
+			ensure.Value(&o.Opts.Config)
+			if o.Opts.Config.Volumes == nil {
+				o.Opts.Config.Volumes = map[string]struct{}{}
 			}
-			o.Conf.Volumes[vol] = struct{}{}
+			o.Opts.Config.Volumes[vol] = struct{}{}
 			return nil
 		}
 	}
@@ -433,7 +447,8 @@ func WithVolume(vol string) Opt {
 		vol = bindVolumeToBind(vol)
 	}
 	return func(o *Options) error {
-		o.Host.Binds = append(o.Host.Binds, vol)
+		ensure.Value(&o.Opts.HostConfig)
+		o.Opts.HostConfig.Binds = append(o.Opts.HostConfig.Binds, vol)
 		return nil
 	}
 }
@@ -468,7 +483,8 @@ func WithMount(mnt string) Opt {
 				err)
 		}
 		mount := dry.Value()[0]
-		o.Host.Mounts = append(o.Host.Mounts, mount)
+		ensure.Value(&o.Opts.HostConfig)
+		o.Opts.HostConfig.Mounts = append(o.Opts.HostConfig.Mounts, mount)
 		return nil
 	}
 }
@@ -477,10 +493,11 @@ func WithMount(mnt string) Opt {
 // instance on, using default options (unlimited size, world-writable).
 func WithTmpfs(path string) Opt {
 	return func(o *Options) error {
-		if o.Host.Tmpfs == nil {
-			o.Host.Tmpfs = map[string]string{}
+		ensure.Value(&o.Opts.HostConfig)
+		if o.Opts.HostConfig.Tmpfs == nil {
+			o.Opts.HostConfig.Tmpfs = map[string]string{}
 		}
-		o.Host.Tmpfs[path] = ""
+		o.Opts.HostConfig.Tmpfs[path] = ""
 		return nil
 	}
 }
@@ -494,10 +511,11 @@ func WithTmpfs(path string) Opt {
 //     to “1777”, that is, “world-writable”.
 func WithTmpfsOpts(path string, opts string) Opt {
 	return func(o *Options) error {
-		if o.Host.Tmpfs == nil {
-			o.Host.Tmpfs = map[string]string{}
+		ensure.Value(&o.Opts.HostConfig)
+		if o.Opts.HostConfig.Tmpfs == nil {
+			o.Opts.HostConfig.Tmpfs = map[string]string{}
 		}
-		o.Host.Tmpfs[path] = opts
+		o.Opts.HostConfig.Tmpfs[path] = opts
 		return nil
 	}
 }
@@ -534,7 +552,8 @@ func WithDevice(dev string) Opt {
 		if device.CgroupPerms == "" {
 			device.CgroupPerms = "rwm" // read-write-mknod
 		}
-		o.Host.Devices = append(o.Host.Devices, container.DeviceMapping{
+		ensure.Value(&o.Opts.HostConfig)
+		o.Opts.HostConfig.Devices = append(o.Opts.HostConfig.Devices, container.DeviceMapping{
 			PathOnHost:        device.HostPath,
 			PathInContainer:   device.ContainerPath,
 			CgroupPermissions: device.CgroupPerms,
@@ -547,7 +566,8 @@ func WithDevice(dev string) Opt {
 // layer.
 func WithReadOnlyRootfs() Opt {
 	return func(o *Options) error {
-		o.Host.ReadonlyRootfs = true
+		ensure.Value(&o.Opts.HostConfig)
+		o.Opts.HostConfig.ReadonlyRootfs = true
 		return nil
 	}
 }
@@ -556,7 +576,8 @@ func WithReadOnlyRootfs() Opt {
 // “seccomp=unconfined”.
 func WithSecurityOpt(opt string) Opt {
 	return func(o *Options) error {
-		o.Host.SecurityOpt = append(o.Host.SecurityOpt, opt)
+		ensure.Value(&o.Opts.HostConfig)
+		o.Opts.HostConfig.SecurityOpt = append(o.Opts.HostConfig.SecurityOpt, opt)
 		return nil
 	}
 }
@@ -565,7 +586,8 @@ func WithSecurityOpt(opt string) Opt {
 // width-height order in contrast to the Docker API order.
 func WithConsoleSize(width, height uint) Opt {
 	return func(o *Options) error {
-		o.Host.ConsoleSize = [2]uint{height, width} // sic!
+		ensure.Value(&o.Opts.HostConfig)
+		o.Opts.HostConfig.ConsoleSize = [2]uint{height, width} // sic!
 		return nil
 	}
 }
@@ -579,25 +601,44 @@ func WithConsoleSize(width, height uint) Opt {
 //
 // Please do not confuse with [WithNetworkMode] mode, where the latter
 // configures the Linux kernel net namespace to use.
-func WithNetwork(net string) Opt {
+func WithNetwork(netw string) Opt {
 	return func(o *Options) error {
 		dry := dockercli.NetworkOpt{}
-		if err := dry.Set(net); err != nil {
+		if err := dry.Set(netw); err != nil {
 			return fmt.Errorf("malformed WithNetwork parameter %q, reason: %s",
-				net, err)
+				netw, err)
 		}
 		ep := dry.Value()[0]
-		if o.Net.EndpointsConfig == nil {
-			o.Net.EndpointsConfig = map[string]*network.EndpointSettings{}
+		ensure.Value(&o.Opts.NetworkingConfig)
+		if o.Opts.NetworkingConfig.EndpointsConfig == nil {
+			o.Opts.NetworkingConfig.EndpointsConfig = map[string]*network.EndpointSettings{}
 		}
-		o.Net.EndpointsConfig[ep.Target] = &network.EndpointSettings{
+		var err error
+		var ipv4, ipv6 netip.Addr
+		if ep.IPv4Address != "" {
+			if ipv4, err = netip.ParseAddr(ep.IPv4Address); err != nil {
+				return fmt.Errorf("invalid IP address, reason: %s", err)
+			}
+		}
+		if ep.IPv6Address != "" {
+			if ipv6, err = netip.ParseAddr(ep.IPv6Address); err != nil {
+				return fmt.Errorf("invalid IPv6 address, reason: %s", err)
+			}
+		}
+		var mac net.HardwareAddr
+		if ep.MacAddress != "" {
+			if mac, err = net.ParseMAC(ep.MacAddress); err != nil {
+				return fmt.Errorf("invalid MAC address, reason: %s", err)
+			}
+		}
+		o.Opts.NetworkingConfig.EndpointsConfig[ep.Target] = &network.EndpointSettings{
 			NetworkID:         ep.Target,
 			Aliases:           ep.Aliases,
 			DriverOpts:        ep.DriverOpts,
 			Links:             ep.Links,
-			IPAddress:         ep.IPv4Address,
-			GlobalIPv6Address: ep.IPv6Address, // TODO: clarify w. respect to GlobalIPv6PrefixLen
-			MacAddress:        ep.MacAddress,
+			IPAddress:         ipv4,
+			GlobalIPv6Address: ipv6, // TODO: clarify w. respect to GlobalIPv6PrefixLen
+			MacAddress:        network.HardwareAddr(mac),
 		}
 		return nil
 	}
@@ -606,7 +647,8 @@ func WithNetwork(net string) Opt {
 // WithHostname configures the host name to use inside the container.
 func WithHostname(host string) Opt {
 	return func(o *Options) error {
-		o.Conf.Hostname = host
+		ensure.Value(&o.Opts.Config)
+		o.Opts.Config.Hostname = host
 		return nil
 	}
 }
@@ -616,7 +658,8 @@ func WithHostname(host string) Opt {
 // the container.
 func WithRestartPolicy(policy string, maxretry int) Opt {
 	return func(o *Options) error {
-		o.Host.RestartPolicy = container.RestartPolicy{
+		ensure.Value(&o.Opts.HostConfig)
+		o.Opts.HostConfig.RestartPolicy = container.RestartPolicy{
 			Name:              container.RestartPolicyMode(policy),
 			MaximumRetryCount: maxretry,
 		}
@@ -628,7 +671,8 @@ func WithRestartPolicy(policy string, maxretry int) Opt {
 // host. Use with great care.
 func WithAllPortsPublished() Opt {
 	return func(o *Options) error {
-		o.Host.PublishAllPorts = true
+		ensure.Value(&o.Opts.HostConfig)
+		o.Opts.HostConfig.PublishAllPorts = true
 		return nil
 	}
 }
@@ -644,7 +688,8 @@ func WithAllPortsPublished() Opt {
 // [set of CPUs]: https://man7.org/linux/man-pages/man7/cpuset.7.html
 func WithCPUSet(cpulist string) Opt {
 	return func(o *Options) error {
-		o.Host.CpusetCpus = cpulist
+		ensure.Value(&o.Opts.HostConfig)
+		o.Opts.HostConfig.CpusetCpus = cpulist
 		return nil
 	}
 }
@@ -657,7 +702,8 @@ func WithCPUSet(cpulist string) Opt {
 // [set of memory nodes]: https://man7.org/linux/man-pages/man7/cpuset.7.html
 func WithMems(memlist string) Opt {
 	return func(o *Options) error {
-		o.Host.CpusetMems = memlist
+		ensure.Value(&o.Opts.HostConfig)
+		o.Opts.HostConfig.CpusetMems = memlist
 		return nil
 	}
 }
@@ -666,8 +712,9 @@ func WithMems(memlist string) Opt {
 // forwards signals and reaps processes.
 func WithCustomInit() Opt {
 	return func(o *Options) error {
+		ensure.Value(&o.Opts.HostConfig)
 		customInit := true
-		o.Host.Init = &customInit
+		o.Opts.HostConfig.Init = &customInit
 		return nil
 	}
 }
@@ -679,7 +726,8 @@ func WithCustomInit() Opt {
 // image default applies).
 func WithUser[I identity.Principal](id I) Opt {
 	return func(o *Options) error {
-		o.Conf.User = identity.WithUser(id)
+		ensure.Value(&o.Opts.Config)
+		o.Opts.Config.User = identity.WithUser(id)
 		return nil
 	}
 }
@@ -689,7 +737,8 @@ func WithUser[I identity.Principal](id I) Opt {
 // any configured group name or ID will be removed.
 func WithGroup[I identity.Principal](gid I) Opt {
 	return func(o *Options) error {
-		o.Conf.User = identity.WithGroup(o.Conf.User, gid)
+		ensure.Value(&o.Opts.Config)
+		o.Opts.Config.User = identity.WithGroup(o.Opts.Config.User, gid)
 		return nil
 	}
 }

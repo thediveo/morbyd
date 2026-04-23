@@ -1,17 +1,22 @@
 <img alt="lxkns logo" align="right" width="200" src="docs/morbyd.png">
 
-# `morbyd`
+# `morbyd/v2`
 
 [![PkgGoDev](https://img.shields.io/badge/-reference-blue?logo=go&logoColor=white&labelColor=505050)](https://pkg.go.dev/github.com/thediveo/morbyd)
 [![License](https://img.shields.io/github/license/thediveo/morbyd)](https://img.shields.io/github/license/thediveo/morbyd)
 ![build and test](https://github.com/thediveo/morbyd/actions/workflows/buildandtest.yaml/badge.svg?branch=master)
 ![goroutines](https://img.shields.io/badge/go%20routines-not%20leaking-success)
 [![Go Report Card](https://goreportcard.com/badge/github.com/thediveo/morbyd)](https://goreportcard.com/report/github.com/thediveo/morbyd)
-![Coverage](https://img.shields.io/badge/Coverage-98.0%25-brightgreen)
+![Coverage](https://img.shields.io/badge/Coverage-97.1%25-brightgreen)
 
-`morbyd` is a thin layer on top of the standard Docker Go client to easily build
-and run throw-away test Docker images and containers. And to easily run commands
-inside these containers.
+(Please see heading `v2` below for details of how to upgrade.)
+
+`morbyd/v2` is a thin layer on top of the standard Docker Go client(*) to easily
+build and run throw-away test Docker images and containers. And to easily run
+commands inside these containers.
+
+(*) Actually, as of `v2` this is technically now the moby Go client
+`github.com/moby/moby/client`.
 
 In particular, `morbyd` hides the gory details of how to stream the output, and
 optionally input, of container and commands via Dockers API. You just use your
@@ -49,6 +54,47 @@ elements, such as names, labels, and options.
 
 For devcontainer instructions, please see the [section "DevContainer"
 below](#devcontainer).
+
+## v2
+
+**TL;DR**: `Container.IP` now returns `netip.Addr` and the `safe` package has
+moved out into `github.com/thediveo/safe`. `morbyd` now uses the properly
+semver'd moby Go client module(s).
+
+### Moby Go Client
+
+Over the course of many moons, the Docker API client implementation has moved
+upstream into `github.com/moby/moby/client` and `github.com/moby/moby/api`. The
+greatest benefit is finally getting `go.mod`s and good riddance to
+[CalVer](https://calver.org/) – the painful and unproductive "calendar
+versioning" without any `go.mod` and all the associated problems in downstream
+projects trying to consume the Go client only. To be fair, this bad idea was
+born before Go got proper modules and versioning support, but there is something
+to be said for not abandoning your follies when there's a new, clear way ahead.
+
+Anyway, this turned out to be a slightly non-trivial refactoring task, as there
+is no direct one-to-one mapping of all the import paths. And to add insult to
+injury, the Docker API function signatures had also to undergo complete
+remapping. Ouch. Generally, the moby Go client API functions are now (mostly)
+following a strict rhyme: instead of strings of additional args, there's now
+single options arg that allows for further API extensions without breaking the
+signatures. In the same rhythm, API responses are now most of the time
+extensible result structures. Luckily, this is abstracted away in `morbyd`, so
+module consumers won't notice. We as the module authors already benefit
+ourselves as it shields us from these changes in the tests of our downstream
+projects.
+
+### Module Consumers-Facing Changes
+
+However, the refactored moby client API now systematically uses `netip.Addr`
+(and co.) instead of previously plain strings in its API. We decided to shield
+consumers of `morbyd` of this in all places where strings have been used, so
+existing tests should migrate to `v2` just fine. The only place in the `morbyd`
+API is `Container.IP` which now returns `netip.Addr` instead of previously
+`net.IP`.
+
+Please note that the `safe` package has been carved out into
+`github.com/thediveo/safe` and is no longer part of `morbyd`.
 
 ## Features of morbyd
 
@@ -105,10 +151,10 @@ package main
 import (
     "context"
 
-    "github.com/thediveo/morbyd"
-    "github.com/thediveo/morbyd/exec"
-    "github.com/thediveo/morbyd/run"
-    "github.com/thediveo/morbyd/session"
+    "github.com/thediveo/morbyd/v2"
+    "github.com/thediveo/morbyd/v2/exec"
+    "github.com/thediveo/morbyd/v2/run"
+    "github.com/thediveo/morbyd/v2/session"
 )
 
 func main() {
@@ -146,10 +192,10 @@ package main
 import (
     "context"
 
-    "github.com/thediveo/morbyd"
-    "github.com/thediveo/morbyd/exec"
-    "github.com/thediveo/morbyd/run"
-    "github.com/thediveo/morbyd/session"
+    "github.com/thediveo/morbyd/v2"
+    "github.com/thediveo/morbyd/v2/exec"
+    "github.com/thediveo/morbyd/v2/run"
+    "github.com/thediveo/morbyd/v2/session"
 )
 
 func main() {
@@ -253,7 +299,7 @@ Please see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Copyright and License
 
-`morbyd` is Copyright 2024, 2025 Harald Albrecht, and licensed under the Apache
+`morbyd` is Copyright 2024‒2026 Harald Albrecht, and licensed under the Apache
 License, Version 2.0.
 
 The package `github.com/thediveo/morbyd/run/dockercli` is [Copyright 2013-2017

@@ -22,14 +22,13 @@ import (
 	"time"
 
 	"github.com/containerd/errdefs"
-	types "github.com/docker/docker/api/types"
-	container "github.com/docker/docker/api/types/container"
-	image "github.com/docker/docker/api/types/image"
-	"github.com/thediveo/morbyd/run"
-	"github.com/thediveo/morbyd/safe"
-	"github.com/thediveo/morbyd/session"
-	"github.com/thediveo/morbyd/timestamper"
+	"github.com/moby/moby/client"
 	mock "go.uber.org/mock/gomock"
+
+	"github.com/thediveo/morbyd/v2/run"
+	"github.com/thediveo/morbyd/v2/session"
+	"github.com/thediveo/morbyd/v2/timestamper"
+	"github.com/thediveo/safe"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -70,7 +69,7 @@ var _ = Describe("run container", Ordered, func() {
 			})
 			rec := sess.Client().(*MockClient).EXPECT()
 
-			rec.ImageInspect(Any, Any).Return(image.InspectResponse{}, errdefs.ErrNotFound)
+			rec.ImageInspect(Any, Any).Return(client.ImageInspectResult{}, errdefs.ErrNotFound)
 			rec.ImagePull(Any, Any, Any).Return(nil, errors.New("error IJK305I"))
 
 			Expect(sess.Run(ctx, "busybox")).Error().To(MatchError(ContainSubstring("cannot pull image")))
@@ -85,7 +84,7 @@ var _ = Describe("run container", Ordered, func() {
 			})
 			rec := sess.Client().(*MockClient).EXPECT()
 
-			rec.ContainerCreate(Any, Any, Any, Any, Any, Any).Return(container.CreateResponse{}, errors.New("error IJK305I"))
+			rec.ContainerCreate(Any, Any).Return(client.ContainerCreateResult{}, errors.New("error IJK305I"))
 
 			Expect(sess.Run(ctx, "busybox")).Error().To(MatchError(ContainSubstring("cannot create container")))
 		})
@@ -102,7 +101,7 @@ var _ = Describe("run container", Ordered, func() {
 			})
 			rec := sess.Client().(*MockClient).EXPECT()
 
-			rec.ContainerAttach(Any, Any, Any).Return(types.HijackedResponse{}, errors.New("error IJK305I"))
+			rec.ContainerAttach(Any, Any, Any).Return(client.ContainerAttachResult{}, errors.New("error IJK305I"))
 
 			Expect(sess.Run(ctx, "busybox", run.WithName(canaryName))).Error().To(MatchError(ContainSubstring("cannot attach to container")))
 			Expect(sess.Container(ctx, canaryName)).Error().To(HaveOccurred())
@@ -120,7 +119,7 @@ var _ = Describe("run container", Ordered, func() {
 			})
 			rec := sess.Client().(*MockClient).EXPECT()
 
-			rec.ContainerStart(Any, Any, Any).Return(errors.New("error IJK305I"))
+			rec.ContainerStart(Any, Any, Any).Return(client.ContainerStartResult{}, errors.New("error IJK305I"))
 
 			Expect(sess.Run(ctx, "busybox", run.WithName(canaryName))).Error().To(MatchError(ContainSubstring("cannot start container")))
 			Expect(sess.Container(ctx, canaryName)).Error().To(HaveOccurred())
@@ -138,7 +137,7 @@ var _ = Describe("run container", Ordered, func() {
 			})
 			rec := sess.Client().(*MockClient).EXPECT()
 
-			rec.ContainerInspect(Any, Any).Return(container.InspectResponse{}, errors.New("error IJK305I"))
+			rec.ContainerInspect(Any, Any, Any).Return(client.ContainerInspectResult{}, errors.New("error IJK305I"))
 
 			Expect(sess.Run(ctx, "busybox", run.WithName(canaryName))).Error().To(MatchError(ContainSubstring("cannot inspect newly started container")))
 		})

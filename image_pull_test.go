@@ -22,12 +22,15 @@ import (
 	"strings"
 	"time"
 
+	client "github.com/moby/moby/client"
 	mock "go.uber.org/mock/gomock"
+
+	"github.com/thediveo/morbyd/v2/internal/jsonmsgs"
+	"github.com/thediveo/morbyd/v2/pull"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gleak"
-	"github.com/thediveo/morbyd/pull"
 	. "github.com/thediveo/success"
 )
 
@@ -53,7 +56,7 @@ var _ = Describe("pulling images", func() {
 		rc := io.NopCloser(strings.NewReader(`
 {"status":"foobar"}
 `))
-		rec.ImagePull(Any, Any, Any).Return(rc, nil)
+		rec.ImagePull(Any, Any, Any).Return(client.ImagePullResponse(jsonmsgs.New(rc)), nil)
 
 		var buff bytes.Buffer
 		Expect(sess.PullImage(ctx, "buzzybocks:earliest", pull.WithOutput(&buff))).To(Succeed())
@@ -84,7 +87,7 @@ var _ = Describe("pulling images", func() {
 		rc := io.NopCloser(strings.NewReader(`
 {"errorDetail":{"code":666,"message":"error IJK305I"}}
 `))
-		rec.ImagePull(Any, Any, Any).Return(rc, nil)
+		rec.ImagePull(Any, Any, Any).Return(client.ImagePushResponse(jsonmsgs.New(rc)), nil)
 
 		Expect(sess.PullImage(ctx, "buzzybocks:earliest")).NotTo(Succeed())
 	})

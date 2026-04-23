@@ -17,6 +17,8 @@ package pull
 import (
 	"io"
 
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -27,15 +29,15 @@ var _ = Describe("pull image options", func() {
 		popts := Options{}
 		for _, opt := range []Opt{
 			WithAllTags(),
-			WithPlatform("sunkenos/sparq"),
+			WithPlatform("plan9/wasm"),
 			WithRegistryAuth("deadfoobar"),
 			WithOutput(io.Discard),
 		} {
 			Expect(opt(&popts)).NotTo(HaveOccurred())
 		}
 		Expect(popts.All).To(BeTrue())
-		Expect(popts.Platform).NotTo(BeNil())
-		Expect(popts.Platform).To(Equal("sunkenos/sparq"))
+		Expect(popts.Platforms).NotTo(BeEmpty())
+		Expect(popts.Platforms).To(ContainElement(Equal(v1.Platform{OS: "plan9", Architecture: "wasm"})))
 		Expect(popts.Out).To(BeIdenticalTo(io.Discard))
 	})
 

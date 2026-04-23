@@ -17,8 +17,9 @@ package exec
 import (
 	"io"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/thediveo/morbyd/identity"
+	"github.com/moby/moby/client"
+
+	"github.com/thediveo/morbyd/v2/identity"
 )
 
 // Opt is a configuration option to run a command inside a container using
@@ -35,7 +36,7 @@ type Options struct {
 	In   io.Reader
 	Out  io.Writer
 	Err  io.Writer
-	Conf container.ExecOptions
+	Conf client.ExecCreateOptions
 }
 
 // WithCombinedOutput sends the commands's stdout and stderr to the specified
@@ -57,7 +58,7 @@ func WithCombinedOutput(w io.Writer) Opt {
 // thus for us) to demultiplex this output sludge after the fact.
 func WithDemuxedOutput(out io.Writer, err io.Writer) Opt {
 	return func(o *Options) error {
-		o.Conf.Tty = false
+		o.Conf.TTY = false
 		o.Out = out
 		o.Err = err
 		return nil
@@ -86,7 +87,7 @@ func WithInput(r io.Reader) Opt {
 // When WithTTY is used before [WithDemuxedOutput], it'll become ineffective.
 func WithTTY() Opt {
 	return func(o *Options) error {
-		o.Conf.Tty = true
+		o.Conf.TTY = true
 		return nil
 	}
 }
@@ -121,7 +122,7 @@ func WithPrivileged() Opt {
 // width-height order in contrast to the Docker API order.
 func WithConsoleSize(width, height uint) Opt {
 	return func(o *Options) error {
-		o.Conf.ConsoleSize = &[2]uint{height, width} // sic!
+		o.Conf.ConsoleSize = client.ConsoleSize{Width: width, Height: height} // sic!
 		return nil
 	}
 }

@@ -21,14 +21,14 @@ import (
 	"os"
 	"time"
 
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/network"
-	"github.com/docker/docker/client"
-	"github.com/thediveo/morbyd/run"
-	"github.com/thediveo/morbyd/safe"
-	"github.com/thediveo/morbyd/session"
-	"github.com/thediveo/morbyd/timestamper"
+	"github.com/moby/moby/api/types/network"
+	"github.com/moby/moby/client"
 	mock "go.uber.org/mock/gomock"
+
+	"github.com/thediveo/morbyd/v2/run"
+	"github.com/thediveo/morbyd/v2/session"
+	"github.com/thediveo/morbyd/v2/timestamper"
+	"github.com/thediveo/safe"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -96,7 +96,7 @@ var _ = Describe("test sessions", func() {
 			rec := sess.Client().(*MockClient).EXPECT()
 
 			rec.NetworkList(Any, Any).
-				Return(nil, errors.New("error IJK305I")) // ...real programmers ;)
+				Return(client.NetworkListResult{}, errors.New("error IJK305I")) // ...real programmers ;)
 			sess.autoClean(ctx, "test.foo=bar")
 		})
 
@@ -110,16 +110,18 @@ var _ = Describe("test sessions", func() {
 			rec := sess.Client().(*MockClient).EXPECT()
 
 			rec.NetworkList(Any, Any).
-				Return([]network.Summary{
-					{ID: "42"},
-					{ID: "666"},
+				Return(client.NetworkListResult{
+					Items: []network.Summary{
+						{Network: network.Network{ID: "42"}},
+						{Network: network.Network{ID: "666"}},
+					},
 				}, nil)
-			rec.NetworkRemove(Any, mock.Eq("42")).
+			rec.NetworkRemove(Any, mock.Eq("42"), Any).
 				Times(1).
-				Return(nil)
-			rec.NetworkRemove(Any, mock.Eq("666")).
+				Return(client.NetworkRemoveResult{}, nil)
+			rec.NetworkRemove(Any, mock.Eq("666"), Any).
 				Times(1).
-				Return(errors.New("error IJK305I"))
+				Return(client.NetworkRemoveResult{}, errors.New("error IJK305I"))
 			sess.autoClean(ctx, "test.foo=bar")
 		})
 
@@ -190,7 +192,7 @@ var _ = Describe("test sessions", func() {
 		})
 		rec := sess.Client().(*MockClient).EXPECT()
 
-		rec.ServerVersion(Any).Return(types.Version{
+		rec.ServerVersion(Any, Any).Return(client.ServerVersionResult{
 			Platform: struct{ Name string }{"foobar Desktop"},
 		}, nil)
 

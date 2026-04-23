@@ -22,15 +22,17 @@ import (
 	"os"
 	"path/filepath"
 
-	dockerbuild "github.com/docker/docker/api/types/build"
-	"github.com/docker/docker/pkg/jsonmessage"
 	bkcontrol "github.com/moby/buildkit/api/services/control"
-	"github.com/moby/buildkit/client"
+	bkclient "github.com/moby/buildkit/client"
 	"github.com/moby/buildkit/util/progress/progressui"
 	"github.com/moby/go-archive"
+	"github.com/moby/moby/api/types/jsonstream"
+	"github.com/moby/moby/client"
+	"github.com/moby/moby/client/pkg/jsonmessage"
 	"github.com/moby/patternmatcher/ignorefile"
-	"github.com/thediveo/morbyd/build"
 	"google.golang.org/protobuf/proto"
+
+	"github.com/thediveo/morbyd/v2/build"
 )
 
 // BuildImage builds a container image using the specified build context and
@@ -52,7 +54,7 @@ import (
 // Use [build.WithBuildKit] to build the image with buildkit.
 func (s *Session) BuildImage(ctx context.Context, buildctxpath string, opts ...build.Opt) (id string, err error) {
 	bios := build.Options{
-		ImageBuildOptions: dockerbuild.ImageBuildOptions{
+		ImageBuildOptions: client.ImageBuildOptions{
 			Dockerfile:  "Dockerfile",
 			Remove:      true,
 			ForceRemove: true,
@@ -85,11 +87,11 @@ func (s *Session) BuildImage(ctx context.Context, buildctxpath string, opts ...b
 	if err != nil {
 		return "", fmt.Errorf("image build failed, reason: %w", err)
 	}
-	defer resp.Body.Close() //nolint:errcheck // any error is irrelevant at this point
+	defer func() { _ = resp.Body.Close() }()
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	statech := make(chan *client.SolveStatus, 32)
+	statech := make(chan *bkclient.SolveStatus, 32)
 	if bios.Version == "2" {
 		// caller requests BuildKit, so we want to leverage buildkit's client
 		// display and progress UI, instead of being a dilettante. (Or is this
@@ -108,11 +110,8 @@ func (s *Session) BuildImage(ctx context.Context, buildctxpath string, opts ...b
 		}()
 	}
 
-	// https://stackoverflow.com/a/48579861 pointing to:
-	// https://pkg.go.dev/github.com/moby/moby/pkg/jsonmessage?utm_source=godoc#DisplayJSONMessagesStream
-	err = jsonmessage.DisplayJSONMessagesStream(resp.Body,
-		bios.Out, 0, false,
-		func(auxmsg jsonmessage.JSONMessage) {
+	err = jsonmessage.DisplayStream(resp.Body, bios.Out,
+		jsonmessage.WithAuxCallback(func(auxmsg jsonstream.Message) {
 			// buildkit messages are rather complex in that they are
 			// protobuf-encoded and transmitted as aux messages with their
 			// dedicated buildkit aux message ID. See also:
@@ -132,7 +131,7 @@ func (s *Session) BuildImage(ctx context.Context, buildctxpath string, opts ...b
 				if err := proto.Unmarshal(bkpbmsg, &status); err != nil {
 					return
 				}
-				statech <- client.NewSolveStatus(&status)
+				statech <- bkclient.NewSolveStatus(&status)
 				return
 			}
 			// Please note that the image ID is reported using an aux message
@@ -146,7 +145,7 @@ func (s *Session) BuildImage(ctx context.Context, buildctxpath string, opts ...b
 			}
 			// Pick up the image ID when it floats by ... and is non-zero.
 			id = aux.ID
-		})
+		}))
 	return id, err
 }
 

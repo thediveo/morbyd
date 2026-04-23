@@ -17,71 +17,68 @@ package morbyd
 import (
 	"math/rand"
 	"net"
-	"strconv"
+	"net/netip"
 )
 
 // Addr represents a non-zero IP address together with a transport-layer port
-// and the particular transport-layer protocol.
+// and the particular transport-layer protocol (or “network” in Go parlance).
 type Addr struct {
-	l4proto string
-	ip      net.IP
-	port    uint16
+	addrport netip.AddrPort
+	network  string
 }
 
-// Addrs is a list of Addr elements, providing helper functions on top.
+// Addrs is a list of Addr elements, providing helper functions on top. See
+// [Addrs.Any] and [Addrs.First].
 type Addrs []Addr
 
 var _ (net.Addr) = (*Addr)(nil)
 
-// NewAddr returns an Addr element.
-func NewAddr(ip net.IP, port uint16, l4proto string) Addr {
+// NewAddr returns an Addr element, configured from the passed [netip.AddrPort]
+// and transport-layer protocol, a.k.a. “network” (such as “tcp”).
+func NewAddr(addrport netip.AddrPort, network string) Addr {
 	return Addr{
-		l4proto: l4proto,
-		ip:      ip,
-		port:    port,
+		addrport: addrport,
+		network:  network,
 	}
 }
 
 // Network returns the “name” of the “network” the service is on, either “tcp”
 // or “udp”.
-func (a Addr) Network() string { return a.l4proto }
+func (a Addr) Network() string {
+	return a.network
+}
 
 // String returns the address with port, such as “127.0.0.1:123” or “[::1]:123”.
 // It returns "" for a zero Addr.
 func (a Addr) String() string {
-	if a.l4proto == "" {
+	if a.network == "" {
 		return ""
 	}
-	if ip := a.ip.To4(); ip != nil {
-		return ip.String() + ":" + strconv.FormatUint(uint64(a.port), 10)
-	}
-	return "[" + a.ip.String() + "]:" + strconv.FormatUint(uint64(a.port), 10)
+	return a.addrport.String()
 }
 
-var ipv4loopback = net.ParseIP("127.0.0.1").To4()
-
 // UnspecifiedAsLoopback returns the IPv4 or IPv6 loopback address if this Addr
-// is unspecified, otherwise Addr unmodified. Use UnspecifiedAsLoopback to
-// ensure to always get a non-unspecified destination address of a published
-// container port.
+// is unspecified, otherwise Addr unmodified. Use UnspecifiedAsLoopback in
+// chained Addr operations to ensure to always get a non-unspecified destination
+// address of a published container port.
+//
+//	addr := addrs.First().UnspecifiedAsLoopback()
 func (a Addr) UnspecifiedAsLoopback() Addr {
-	if a.l4proto == "" {
+	if a.network == "" {
 		return Addr{}
 	}
-	if !a.ip.IsUnspecified() {
+	if !a.addrport.Addr().IsUnspecified() {
 		return a
 	}
-	if a.ip.To4() != nil {
+	if a.addrport.Addr().Is4() {
 		return Addr{
-			l4proto: a.l4proto,
-			ip:      ipv4loopback,
-			port:    a.port,
+			addrport: netip.AddrPortFrom(netip.AddrFrom4([4]byte{127, 0, 0, 1}), a.addrport.Port()),
+			network:  a.network,
 		}
 	}
 	return Addr{
-		l4proto: a.l4proto,
-		ip:      net.IPv6loopback,
-		port:    a.port,
+		addrport: netip.AddrPortFrom(netip.IPv6Loopback(), a.addrport.Port()),
+		network:  a.network,
 	}
 }
 

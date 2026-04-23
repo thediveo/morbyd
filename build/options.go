@@ -17,9 +17,10 @@ package build
 import (
 	"io"
 
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/build"
-	lbls "github.com/thediveo/morbyd/labels"
+	"github.com/moby/moby/api/types/build"
+	"github.com/moby/moby/client"
+
+	lbls "github.com/thediveo/morbyd/v2/labels"
 )
 
 // Opt is a configuration option to build a container image using
@@ -35,7 +36,7 @@ type Opt func(*Options) error
 // [Build an image (Docker API)]: https://docs.docker.com/engine/api/v1.43/#tag/Image/operation/ImageBuild
 type Options struct {
 	Out io.Writer
-	types.ImageBuildOptions
+	client.ImageBuildOptions
 }
 
 // WithTag specifies a name and optionally tag in “name:tag” format. This option
@@ -191,7 +192,7 @@ func WithOutput(w io.Writer) Opt {
 // WithOpts (re)sets all image build options to the specified settings at once,
 // with the sole exception of an optional output writer for image build process
 // output (that needs to set independently using WithImageBuildOutput).
-func WithOpts(opts build.ImageBuildOptions) Opt {
+func WithOpts(opts client.ImageBuildOptions) Opt {
 	return func(o *Options) error {
 		o.ImageBuildOptions = opts
 		return nil

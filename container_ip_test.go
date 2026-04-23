@@ -19,16 +19,18 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
+	"net/netip"
 	"time"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/network"
-	"github.com/thediveo/morbyd/run"
-	"github.com/thediveo/morbyd/session"
-	"github.com/thediveo/morbyd/timestamper"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/network"
+	"github.com/moby/moby/client"
 	mock "go.uber.org/mock/gomock"
+
+	"github.com/thediveo/morbyd/v2/run"
+	"github.com/thediveo/morbyd/v2/session"
+	"github.com/thediveo/morbyd/v2/timestamper"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -61,7 +63,7 @@ var _ = Describe("getting container IPs", Ordered, func() {
 
 		By("doing an HTTP exchange with the container")
 		ip := cntr.IP(ctx)
-		Expect(ip).NotTo(BeNil())
+		Expect(ip.IsValid()).To(BeTrue())
 		get := Successful(http.NewRequestWithContext(ctx,
 			http.MethodGet, fmt.Sprintf("http://%s/", ip), nil))
 		clnt := &http.Client{Timeout: 5 * time.Second}
@@ -82,24 +84,30 @@ var _ = Describe("getting container IPs", Ordered, func() {
 
 		// These should be network IDs as opposed to names, but since these are
 		// on par, using names makes our mocking more self-descriptive.
-		rec.NetworkInspect(Any, mock.Eq("mac-wie-lahm"), Any).Return(network.Summary{
-			Driver: "macvlan",
+		rec.NetworkInspect(Any, mock.Eq("mac-wie-lahm"), Any).Return(client.NetworkInspectResult{
+			Network: network.Inspect{
+				Network: network.Network{
+					Driver: "macvlan",
+				},
+			},
 		}, nil)
 
 		cntr := &Container{
 			Session: sess,
-			Details: container.InspectResponse{
-				NetworkSettings: &container.NetworkSettings{
-					Networks: map[string]*network.EndpointSettings{
-						"mac-wie-lahm": {
-							NetworkID: "mac-wie-lahm",
-							IPAddress: "1.0.1.1",
+			Details: client.ContainerInspectResult{
+				Container: container.InspectResponse{
+					NetworkSettings: &container.NetworkSettings{
+						Networks: map[string]*network.EndpointSettings{
+							"mac-wie-lahm": {
+								NetworkID: "mac-wie-lahm",
+								IPAddress: netip.MustParseAddr("1.0.1.1"),
+							},
 						},
 					},
 				},
 			},
 		}
-		Expect(cntr.IP(ctx)).To(BeNil())
+		Expect(cntr.IP(ctx).IsValid()).To(BeFalse())
 	})
 
 	It("returns a nil IP in case of API errors", func(ctx context.Context) {
@@ -113,22 +121,24 @@ var _ = Describe("getting container IPs", Ordered, func() {
 
 		// These should be network IDs as opposed to names, but since these are
 		// on par, using names makes our mocking more self-descriptive.
-		rec.NetworkInspect(Any, Any, Any).Return(network.Summary{}, errors.New("error IJK305I"))
+		rec.NetworkInspect(Any, Any, Any).Return(client.NetworkInspectResult{}, errors.New("error IJK305I"))
 
 		cntr := &Container{
 			Session: sess,
-			Details: container.InspectResponse{
-				NetworkSettings: &container.NetworkSettings{
-					Networks: map[string]*network.EndpointSettings{
-						"bridge-over-troubled-data": {
-							NetworkID: "bridge-over-troubled-data",
-							IPAddress: "1.0.2.1",
+			Details: client.ContainerInspectResult{
+				Container: container.InspectResponse{
+					NetworkSettings: &container.NetworkSettings{
+						Networks: map[string]*network.EndpointSettings{
+							"bridge-over-troubled-data": {
+								NetworkID: "bridge-over-troubled-data",
+								IPAddress: netip.MustParseAddr("1.0.2.1"),
+							},
 						},
 					},
 				},
 			},
 		}
-		Expect(cntr.IP(ctx)).To(BeNil())
+		Expect(cntr.IP(ctx).IsValid()).To(BeFalse())
 	})
 
 	It("returns a nil IP in case of a none (null) network", func(ctx context.Context) {
@@ -142,31 +152,38 @@ var _ = Describe("getting container IPs", Ordered, func() {
 
 		// These should be network IDs as opposed to names, but since these are
 		// on par, using names makes our mocking more self-descriptive.
-		rec.NetworkInspect(Any, mock.Eq("bubble"), Any).Return(network.Summary{
-			Driver: "null",
+		rec.NetworkInspect(Any, mock.Eq("bubble"), Any).Return(client.NetworkInspectResult{
+			Network: network.Inspect{
+				Network: network.Network{
+					Driver: "null",
+				},
+			},
 		}, nil)
-		rec.NetworkInspect(Any, mock.Eq("bridged"), Any).MinTimes(0).MaxTimes(1).Return(network.Summary{
-			Driver: "bridge",
-		}, nil)
+		rec.NetworkInspect(Any, mock.Eq("bridged"), Any).MinTimes(0).MaxTimes(1).
+			Return(client.NetworkInspectResult{
+				Network: network.Inspect{
+					Network: network.Network{Driver: "bridge"},
+				},
+			}, nil)
 
 		cntr := &Container{
 			Session: sess,
-			Details: container.InspectResponse{
-				NetworkSettings: &container.NetworkSettings{
-					Networks: map[string]*network.EndpointSettings{
-						"none": {
-							NetworkID: "bubble",
-							IPAddress: "",
-						},
-						"bridged": {
-							NetworkID: "bridged",
-							IPAddress: "",
+			Details: client.ContainerInspectResult{
+				Container: container.InspectResponse{
+					NetworkSettings: &container.NetworkSettings{
+						Networks: map[string]*network.EndpointSettings{
+							"none": {
+								NetworkID: "bubble",
+							},
+							"bridged": {
+								NetworkID: "bridged",
+							},
 						},
 					},
 				},
 			},
 		}
-		Expect(cntr.IP(ctx)).To(BeNil())
+		Expect(cntr.IP(ctx).IsValid()).To(BeFalse())
 	})
 
 	It("returns loopback IP in case of a host network", func(ctx context.Context) {
@@ -180,24 +197,27 @@ var _ = Describe("getting container IPs", Ordered, func() {
 
 		// These should be network IDs as opposed to names, but since these are
 		// on par, using names makes our mocking more self-descriptive.
-		rec.NetworkInspect(Any, mock.Eq("horscht"), Any).Return(network.Summary{
-			Driver: "host",
+		rec.NetworkInspect(Any, mock.Eq("horscht"), Any).Return(client.NetworkInspectResult{
+			Network: network.Inspect{
+				Network: network.Network{Driver: "host"},
+			},
 		}, nil)
 
 		cntr := &Container{
 			Session: sess,
-			Details: container.InspectResponse{
-				NetworkSettings: &container.NetworkSettings{
-					Networks: map[string]*network.EndpointSettings{
-						"host": {
-							NetworkID: "horscht",
-							IPAddress: "",
+			Details: client.ContainerInspectResult{
+				Container: container.InspectResponse{
+					NetworkSettings: &container.NetworkSettings{
+						Networks: map[string]*network.EndpointSettings{
+							"host": {
+								NetworkID: "horscht",
+							},
 						},
 					},
 				},
 			},
 		}
-		Expect(cntr.IP(ctx)).To(Equal(net.ParseIP("127.0.0.1")))
+		Expect(cntr.IP(ctx)).To(Equal(netip.MustParseAddr("127.0.0.1")))
 	})
 
 	It("skips a network where we have no IP", func(ctx context.Context) {
@@ -211,24 +231,27 @@ var _ = Describe("getting container IPs", Ordered, func() {
 
 		// These should be network IDs as opposed to names, but since these are
 		// on par, using names makes our mocking more self-descriptive.
-		rec.NetworkInspect(Any, mock.Eq("bubble"), Any).Return(network.Summary{
-			Driver: "bridge",
+		rec.NetworkInspect(Any, mock.Eq("bubble"), Any).Return(client.NetworkInspectResult{
+			Network: network.Inspect{
+				Network: network.Network{Driver: "bridge"},
+			},
 		}, nil)
 
 		cntr := &Container{
 			Session: sess,
-			Details: container.InspectResponse{
-				NetworkSettings: &container.NetworkSettings{
-					Networks: map[string]*network.EndpointSettings{
-						"bubble": {
-							NetworkID: "bubble",
-							IPAddress: "",
+			Details: client.ContainerInspectResult{
+				Container: container.InspectResponse{
+					NetworkSettings: &container.NetworkSettings{
+						Networks: map[string]*network.EndpointSettings{
+							"bubble": {
+								NetworkID: "bubble",
+							},
 						},
 					},
 				},
 			},
 		}
-		Expect(cntr.IP(ctx)).To(BeNil())
+		Expect(cntr.IP(ctx).IsValid()).To(BeFalse())
 	})
 
 })

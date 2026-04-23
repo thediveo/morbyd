@@ -20,9 +20,11 @@ import (
 	"io"
 	"maps"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/pkg/stdcopy"
-	"github.com/thediveo/morbyd/run"
+	"github.com/moby/moby/api/pkg/stdcopy"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/client"
+
+	"github.com/thediveo/morbyd/v2/run"
 )
 
 // Run (create and start) a new container, using the referenced image and
@@ -43,12 +45,14 @@ func (s *Session) Run(ctx context.Context, imageref string, opts ...run.Opt) (cn
 	// https://github.com/docker/cli/blob/f18a476b6d240bafbaefb65e51f837eab9e02b94/cli/command/container/run.go#L121
 
 	copts := run.Options{
-		Conf: container.Config{
-			Image:  imageref,
-			Labels: map[string]string{},
+		Opts: client.ContainerCreateOptions{
+			Config: &container.Config{
+				Image:  imageref,
+				Labels: map[string]string{},
+			},
 		},
 	}
-	maps.Copy(copts.Conf.Labels, s.opts.Labels) // inherit labels from session.
+	maps.Copy(copts.Opts.Config.Labels, s.opts.Labels) // inherit labels from session.
 	for _, opt := range opts {
 		if err := opt(&copts); err != nil {
 			return nil, err
@@ -71,12 +75,7 @@ func (s *Session) Run(ctx context.Context, imageref string, opts ...run.Opt) (cn
 	}
 
 	// Create the container; this doesn't start it yet.
-	createResp, err := s.moby.ContainerCreate(ctx,
-		&copts.Conf,
-		&copts.Host,
-		&copts.Net,
-		nil,
-		copts.Name)
+	createResp, err := s.moby.ContainerCreate(ctx, copts.Opts)
 	if err != nil {
 		return nil, fmt.Errorf("cannot create container, reason: %w", err)
 	}
@@ -89,7 +88,7 @@ func (s *Session) Run(ctx context.Context, imageref string, opts ...run.Opt) (cn
 		if err == nil {
 			return
 		}
-		_ = s.moby.ContainerRemove(ctx, cntrID, container.RemoveOptions{
+		_, _ = s.moby.ContainerRemove(ctx, cntrID, client.ContainerRemoveOptions{
 			Force: true,
 		})
 	}()
@@ -101,7 +100,7 @@ func (s *Session) Run(ctx context.Context, imageref string, opts ...run.Opt) (cn
 	// separately. But when using a TTY, we get the container's stdout+stderr
 	// mixed together.
 	attachResp, err := s.moby.ContainerAttach(ctx,
-		cntrID, container.AttachOptions{
+		cntrID, client.ContainerAttachOptions{
 			Stream: true,
 			Stdout: true,
 			Stderr: true,
@@ -119,7 +118,7 @@ func (s *Session) Run(ctx context.Context, imageref string, opts ...run.Opt) (cn
 			attachResp.Close()
 		}()
 
-		if copts.Conf.Tty {
+		if copts.Opts.Config.Tty {
 			// When using a TTY, only copy the single combined output stream
 			// into the output stream specified in the run options.
 			_, _ = io.Copy(copts.Out, attachResp.Reader)
@@ -144,15 +143,15 @@ func (s *Session) Run(ctx context.Context, imageref string, opts ...run.Opt) (cn
 	}
 
 	// Finally, we can try to start the container.
-	if err := s.moby.ContainerStart(ctx, cntrID, container.StartOptions{}); err != nil {
+	if _, err := s.moby.ContainerStart(ctx, cntrID, client.ContainerStartOptions{}); err != nil {
 		return nil, fmt.Errorf("cannot start container, reason: %w", err)
 	}
-	details, err := s.moby.ContainerInspect(ctx, cntrID)
+	details, err := s.moby.ContainerInspect(ctx, cntrID, client.ContainerInspectOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("cannot inspect newly started container, reason: %w", err)
 	}
 	cntr = &Container{
-		Name:    details.Name[1:],
+		Name:    details.Container.Name[1:],
 		ID:      createResp.ID,
 		Session: s,
 		Details: details,

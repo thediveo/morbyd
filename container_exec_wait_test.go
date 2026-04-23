@@ -19,7 +19,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/docker/docker/api/types/container"
+	"github.com/moby/moby/client"
 	mock "go.uber.org/mock/gomock"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -55,13 +55,13 @@ var _ = Describe("waiting for commands executing inside containers", Ordered, fu
 	It("reports when the introspection fails", func(ctx context.Context) {
 		ctrl := mock.NewController(GinkgoT())
 		sess := Successful(NewSession(ctx,
-			WithMockController(ctrl, "ContainerExecInspect")))
+			WithMockController(ctrl, "ExecInspect")))
 		DeferCleanup(func(ctx context.Context) {
 			sess.Close(ctx)
 		})
 		rec := sess.Client().(*MockClient).EXPECT()
 
-		rec.ContainerExecInspect(Any, Any).Return(container.ExecInspect{}, errors.New("error IJK305I"))
+		rec.ExecInspect(Any, Any, Any).Return(client.ExecInspectResult{}, errors.New("error IJK305I"))
 
 		ex := &ExecSession{
 			Container: &Container{
@@ -76,13 +76,13 @@ var _ = Describe("waiting for commands executing inside containers", Ordered, fu
 	It("reports when the command is alive despite being dead", func(ctx context.Context) {
 		ctrl := mock.NewController(GinkgoT())
 		sess := Successful(NewSession(ctx,
-			WithMockController(ctrl, "ContainerExecInspect")))
+			WithMockController(ctrl, "ExecInspect")))
 		DeferCleanup(func(ctx context.Context) {
 			sess.Close(ctx)
 		})
 		rec := sess.Client().(*MockClient).EXPECT()
 
-		rec.ContainerExecInspect(Any, Any).Return(container.ExecInspect{
+		rec.ExecInspect(Any, Any, Any).Return(client.ExecInspectResult{
 			Running: true,
 		}, nil)
 
