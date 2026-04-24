@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/moby/moby/client"
+	"github.com/thediveo/safe"
 	mock "go.uber.org/mock/gomock"
 
 	"github.com/thediveo/morbyd/v2/ipam"
@@ -29,7 +30,6 @@ import (
 	"github.com/thediveo/morbyd/v2/run"
 	"github.com/thediveo/morbyd/v2/session"
 	"github.com/thediveo/morbyd/v2/timestamper"
-	"github.com/thediveo/safe"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

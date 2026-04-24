@@ -19,11 +19,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/thediveo/safe"
+
 	"github.com/thediveo/morbyd/v2"
 	"github.com/thediveo/morbyd/v2/exec"
 	"github.com/thediveo/morbyd/v2/run"
 	"github.com/thediveo/morbyd/v2/session"
-	"github.com/thediveo/safe"
 )
 
 // Execute a command inside a running container using [Container.Exec].
