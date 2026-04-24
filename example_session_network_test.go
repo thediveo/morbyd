@@ -20,13 +20,13 @@ import (
 	"time"
 
 	"github.com/moby/moby/client"
+	"github.com/thediveo/safe"
 
 	"github.com/thediveo/morbyd/v2"
 	"github.com/thediveo/morbyd/v2/ipam"
 	"github.com/thediveo/morbyd/v2/net"
 	"github.com/thediveo/morbyd/v2/run"
 	"github.com/thediveo/morbyd/v2/session"
-	"github.com/thediveo/safe"
 )
 
 // Create a new “custom” Docker network, then run an example container attached
