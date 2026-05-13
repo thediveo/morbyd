@@ -20,7 +20,7 @@ At a glance:
   - option function design with extensive [Go Doc comments] that IDEs show upon
     option completion. No more pseudo option function “callbacks” that are
     none the better than passing the original Docker config type verbatim.
-  - uses the [official Docker Go client] in order to benefit from its security
+  - uses the official [Moby SDK Go client] in order to benefit from its security
     fixes, functional upgrades, and all the other nice things to to get directly
     from upstream.
   - “auto-cleaning” that runs when creating a new test session and again at its
@@ -38,7 +38,7 @@ ephemeral – test containers.
 
 [option functions]: https://dave.cheney.net/2014/10/17/functional-options-for-friendly-apis
 [Go Doc comments]: https://tip.golang.org/doc/comment
-[official Docker Go client]: https://pkg.go.dev/github.com/docker/docker/client
+[Moby SDK Go client]: https://pkg.go.dev/github.com/moby/moby/client
 [Ginkgo]: https://pkg.go.dev/github.com/onsi/ginkgo
 [Moby (Dock)]: https://www.docker.com/blog/call-me-moby-dock/
 */
