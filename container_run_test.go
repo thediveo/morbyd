@@ -142,6 +142,30 @@ var _ = Describe("run container", Ordered, func() {
 			Expect(sess.Run(ctx, "busybox", run.WithName(canaryName))).Error().To(MatchError(ContainSubstring("cannot inspect newly started container")))
 		})
 
+		It("reports a container name squatter", func(ctx context.Context) {
+			const contentedName = "morbyd-contented-name-container"
+
+			sess := Successful(NewSession(ctx,
+				session.WithAutoCleaning("test.morbyd=container-run-name-contention")))
+			DeferCleanup(func(ctx context.Context) {
+				sess.Close(ctx)
+			})
+			squattercreator := caller(0, 1)
+			squatter := Successful(sess.Run(ctx, "busybox:latest",
+				run.WithName(contentedName),
+				run.WithCommand("/bin/sh", "-c", "while true; do sleep 1; done"),
+				run.WithCombinedOutput(GinkgoWriter)))
+			Expect(squatter.PID(ctx)).Error().ToNot(HaveOccurred())
+
+			wl, err := sess.Run(ctx, "busybox:latest",
+				run.WithName(contentedName),
+				run.WithCommand("/bin/sh", "-c", "while true; do sleep 1; done"),
+				run.WithCombinedOutput(GinkgoWriter))
+			Expect(err).To(MatchError(ContainSubstring(
+				"cannot create container: name already taken by " + squattercreator)))
+			Expect(wl).To(BeNil())
+		})
+
 	})
 
 	It("runs a container and captures its stdout and stderr separately", func(ctx context.Context) {
