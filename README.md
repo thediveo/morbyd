@@ -7,7 +7,7 @@
 ![build and test](https://github.com/thediveo/morbyd/actions/workflows/buildandtest.yaml/badge.svg?branch=master)
 ![goroutines](https://img.shields.io/badge/go%20routines-not%20leaking-success)
 [![Go Report Card](https://goreportcard.com/badge/github.com/thediveo/morbyd)](https://goreportcard.com/report/github.com/thediveo/morbyd)
-![Coverage](https://img.shields.io/badge/Coverage-97.1%25-brightgreen)
+![Coverage](https://img.shields.io/badge/Coverage-96.8%25-brightgreen)
 
 (Please see heading `v2` below for details of how to upgrade.)
 

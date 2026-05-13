@@ -20,12 +20,18 @@ import (
 	"io"
 	"maps"
 
+	"github.com/containerd/errdefs"
 	"github.com/moby/moby/api/pkg/stdcopy"
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/client"
 
 	"github.com/thediveo/morbyd/v2/run"
 )
+
+// ContainerRunnerLabelName defines the name of a container label describing the creator
+// of that container in form of file name, line number, and optional caller
+// function.
+const ContainerRunnerLabelName = MorbydLabelNamespace + "container.runner"
 
 // Run (create and start) a new container, using the referenced image and
 // optional configuration information, returning a *Container object if
@@ -58,6 +64,7 @@ func (s *Session) Run(ctx context.Context, imageref string, opts ...run.Opt) (cn
 			return nil, err
 		}
 	}
+	copts.Opts.Config.Labels[ContainerRunnerLabelName] = caller(1, 0)
 
 	if copts.Out == nil {
 		copts.Out = io.Discard
@@ -77,7 +84,18 @@ func (s *Session) Run(ctx context.Context, imageref string, opts ...run.Opt) (cn
 	// Create the container; this doesn't start it yet.
 	createResp, err := s.moby.ContainerCreate(ctx, copts.Opts)
 	if err != nil {
-		return nil, fmt.Errorf("cannot create container, reason: %w", err)
+		if !errdefs.IsConflict(err) || copts.Opts.Name == "" {
+			return nil, fmt.Errorf("cannot create container, reason: %w", err)
+		}
+		squatterdetails, err := s.moby.ContainerInspect(ctx, copts.Opts.Name, client.ContainerInspectOptions{})
+		if err != nil {
+			return nil, fmt.Errorf("cannot create container, reason: %w", err)
+		}
+		squatter := squatterdetails.Container.Config.Labels[ContainerRunnerLabelName]
+		if squatter == "" {
+			return nil, fmt.Errorf("cannot create container, reason: %w", err)
+		}
+		return nil, fmt.Errorf("cannot create container: name already taken by %s", squatter)
 	}
 	cntrID := createResp.ID
 
