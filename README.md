@@ -116,8 +116,8 @@ Please note that the `safe` package has been carved out into
     - allows you to add your own (missing?) option functions, as all
       option-related types are exported.
 
-  - uses the [official Docker Go
-    client](https://pkg.go.dev/github.com/docker/docker/client) in order to
+  - uses the [official Moby Go SDK
+    client](https://pkg.go.dev/github.com/moby/moby/client) in order to
     benefit from its security fixes, functional upgrades, and all the other nice
     things to get directly from upstream.
   
