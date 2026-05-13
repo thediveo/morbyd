@@ -158,7 +158,7 @@ var _ = Describe("getting container IPs", Ordered, func() {
 					Driver: "null",
 				},
 			},
-		}, nil)
+		}, nil).MinTimes(0).MaxTimes(1)
 		rec.NetworkInspect(Any, mock.Eq("bridged"), Any).MinTimes(0).MaxTimes(1).
 			Return(client.NetworkInspectResult{
 				Network: network.Inspect{
