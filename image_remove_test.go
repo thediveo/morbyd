@@ -15,25 +15,23 @@
 package morbyd
 
 import (
-	"fmt"
-	"runtime"
+	"context"
+	"errors"
+
+	"github.com/thediveo/morbyd/v2/remove"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("call site locations", func() {
+var _ = Describe("image removal", Ordered, func() {
 
-	It("describes correctly", func() {
-		_, _, line, ok := runtime.Caller(0)
-		Expect(ok).To(BeTrue())
-		s := caller(0, 0)
-		Expect(s).To(MatchRegexp(
-			fmt.Sprintf("caller_test\\.go:%d \\(.*/v2\\.init\\.func\\d+\\.1\\)", line+2)))
-	})
-
-	It("returns nothing if totally off the stack", func() {
-		Expect(caller(32767, 0)).To(BeEmpty())
+	It("reports option errors", func() {
+		res, err := (&Session{}).RemoveImage(
+			context.Background(), "",
+			func(o *remove.Options) error { return errors.New("JKL305") })
+		Expect(err).To(HaveOccurred())
+		Expect(res).To(BeZero())
 	})
 
 })

@@ -26,6 +26,7 @@ import (
 	"github.com/thediveo/safe"
 	mock "go.uber.org/mock/gomock"
 
+	"github.com/thediveo/morbyd/v2/internal/ensure"
 	"github.com/thediveo/morbyd/v2/run"
 	"github.com/thediveo/morbyd/v2/session"
 	"github.com/thediveo/morbyd/v2/timestamper"
@@ -34,6 +35,15 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/thediveo/success"
 )
+
+func withoutLabel(label string) run.Opt {
+	return func(o *run.Options) error {
+		ensure.Value(&o.Opts.Config)
+		ensure.Map(&o.Opts.Config.Labels)
+		delete(o.Opts.Config.Labels, label)
+		return nil
+	}
+}
 
 var _ = Describe("run container", Ordered, func() {
 
@@ -163,6 +173,30 @@ var _ = Describe("run container", Ordered, func() {
 				run.WithCombinedOutput(GinkgoWriter))
 			Expect(err).To(MatchError(ContainSubstring(
 				"cannot create container: name already taken by " + squattercreator)))
+			Expect(wl).To(BeNil())
+		})
+
+		It("reports correctly when no container creator name available", func(ctx context.Context) {
+			const contentedName = "morbyd-contented-name-container"
+
+			sess := Successful(NewSession(ctx,
+				session.WithAutoCleaning("test.morbyd=container-run-name-contention")))
+			DeferCleanup(func(ctx context.Context) {
+				sess.Close(ctx)
+			})
+			squatter := Successful(sess.Run(ctx, "busybox:latest",
+				withoutLabel(ContainerRunnerLabelName),
+				run.WithName(contentedName),
+				run.WithCommand("/bin/sh", "-c", "while true; do sleep 1; done"),
+				run.WithCombinedOutput(GinkgoWriter)))
+			Expect(squatter.PID(ctx)).Error().ToNot(HaveOccurred())
+
+			wl, err := sess.Run(ctx, "busybox:latest",
+				run.WithName(contentedName),
+				run.WithCommand("/bin/sh", "-c", "while true; do sleep 1; done"),
+				run.WithCombinedOutput(GinkgoWriter))
+			Expect(err).To(MatchError(ContainSubstring(
+				"Conflict. The container name \"/morbyd-contented-name-container\" is already in use by container")))
 			Expect(wl).To(BeNil())
 		})
 
