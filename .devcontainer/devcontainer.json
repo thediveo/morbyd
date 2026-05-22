@@ -7,9 +7,9 @@
             "protocol": "http"
         }
     },
-    "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+    "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
     "features": {
-        "ghcr.io/devcontainers/features/docker-in-docker:2": {
+        "ghcr.io/devcontainers/features/docker-in-docker:3": {
             "version": "latest",
             "moby": false // go for the upstream Docker-CE
         },
@@ -23,7 +23,7 @@
             "num-programs": "1",
             "race": true,
             "verbose": true,
-            "html": true
+             "html": true
         },
         "ghcr.io/thediveo/devcontainer-features/pin-github-action:0": {}
     },
@@ -39,7 +39,8 @@
                 "brunnerh.insert-unicode",
                 "mhutchie.git-graph",
                 "ms-vscode.makefile-tools",
-                "redhat.vscode-yaml"
+                "redhat.vscode-yaml",
+                "ms-vscode.live-server"
             ]
         }
     }
