@@ -59,12 +59,12 @@ func (s *Session) Run(ctx context.Context, imageref string, opts ...run.Opt) (cn
 		},
 	}
 	maps.Copy(copts.Opts.Config.Labels, s.opts.Labels) // inherit labels from session.
+	copts.Opts.Config.Labels[ContainerRunnerLabelName] = caller(1, 0)
 	for _, opt := range opts {
 		if err := opt(&copts); err != nil {
 			return nil, err
 		}
 	}
-	copts.Opts.Config.Labels[ContainerRunnerLabelName] = caller(1, 0)
 
 	if copts.Out == nil {
 		copts.Out = io.Discard
@@ -84,16 +84,17 @@ func (s *Session) Run(ctx context.Context, imageref string, opts ...run.Opt) (cn
 	// Create the container; this doesn't start it yet.
 	createResp, err := s.moby.ContainerCreate(ctx, copts.Opts)
 	if err != nil {
-		if !errdefs.IsConflict(err) || copts.Opts.Name == "" {
-			return nil, fmt.Errorf("cannot create container, reason: %w", err)
+		creationerr := err
+		if !errdefs.IsConflict(creationerr) || copts.Opts.Name == "" {
+			return nil, fmt.Errorf("cannot create container, reason: %w", creationerr)
 		}
 		squatterdetails, err := s.moby.ContainerInspect(ctx, copts.Opts.Name, client.ContainerInspectOptions{})
 		if err != nil {
-			return nil, fmt.Errorf("cannot create container, reason: %w", err)
+			return nil, fmt.Errorf("cannot create container, reason: %w", creationerr)
 		}
 		squatter := squatterdetails.Container.Config.Labels[ContainerRunnerLabelName]
 		if squatter == "" {
-			return nil, fmt.Errorf("cannot create container, reason: %w", err)
+			return nil, fmt.Errorf("cannot create container, reason: %w", creationerr)
 		}
 		return nil, fmt.Errorf("cannot create container: name already taken by %s", squatter)
 	}
