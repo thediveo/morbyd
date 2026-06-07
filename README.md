@@ -7,7 +7,7 @@
 ![build and test](https://github.com/thediveo/morbyd/actions/workflows/buildandtest.yaml/badge.svg?branch=master)
 ![goroutines](https://img.shields.io/badge/go%20routines-not%20leaking-success)
 [![Go Report Card](https://goreportcard.com/badge/github.com/thediveo/morbyd)](https://goreportcard.com/report/github.com/thediveo/morbyd)
-![Coverage](https://img.shields.io/badge/Coverage-97.1%25-brightgreen)
+![Coverage](https://img.shields.io/badge/Coverage-97.3%25-brightgreen)
 
 (Please see heading `v2` below for details of how to upgrade.)
 
@@ -283,9 +283,9 @@ battle-proven tools for using Docker images and containers in Go tests?
 > Volume~~" command, as it is utterly broken by design, ignoring
 > `.devcontainer/devcontainer.json`.
 
-1. `git clone https://github.com/thediveo/enumflag`
+1. `git clone https://github.com/thediveo/morbyd`
 2. in VSCode: Ctrl+Shift+P, "Dev Containers: Open Workspace in Container..."
-3. select `enumflag.code-workspace` and off you go...
+3. select `morbyd.code-workspace` and off you go...
 
 ## Supported Go Versions
 
