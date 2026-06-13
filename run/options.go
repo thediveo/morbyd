@@ -724,7 +724,7 @@ func WithCustomInit() Opt {
 // user ID. WithUser will remove any previously configured group, either setting
 // the specified group or configuring no group at all (so that the container
 // image default applies).
-func WithUser[I identity.Principal](id I) Opt {
+func WithUser[P identity.Principal](id P) Opt {
 	return func(o *Options) error {
 		ensure.Value(&o.Opts.Config)
 		o.Opts.Config.User = identity.WithUser(id)
@@ -735,7 +735,7 @@ func WithUser[I identity.Principal](id I) Opt {
 // WithGroup configures the group the command(s) inside a container will be run
 // as, taking either a group name or ID. If an empty group name "" is specified,
 // any configured group name or ID will be removed.
-func WithGroup[I identity.Principal](gid I) Opt {
+func WithGroup[P identity.Principal](gid P) Opt {
 	return func(o *Options) error {
 		ensure.Value(&o.Opts.Config)
 		o.Opts.Config.User = identity.WithGroup(o.Opts.Config.User, gid)
