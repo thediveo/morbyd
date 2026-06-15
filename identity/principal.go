@@ -27,7 +27,7 @@ type Principal interface{ ~string | ~int }
 // user ID. WithUser will remove any previously configured group, either setting
 // the specified group or configuring no group at all (so that the container
 // image default applies).
-func WithUser[I Principal](id I) string {
+func WithUser[P Principal](id P) string {
 	var user string
 	switch v := any(id).(type) {
 	case string:
@@ -41,7 +41,7 @@ func WithUser[I Principal](id I) string {
 // WithGroup configures the group the command(s) inside a container will be run
 // as, taking either a group name or ID. If an empty group name "" is specified,
 // any configured group name or ID will be removed.
-func WithGroup[I Principal](p string, gid I) string {
+func WithGroup[P Principal](p string, gid P) string {
 	var group string
 	switch v := any(gid).(type) {
 	case string:
