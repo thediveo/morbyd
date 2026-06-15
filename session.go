@@ -17,8 +17,10 @@ package morbyd
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
+	"github.com/containerd/errdefs"
 	"github.com/moby/moby/client"
 
 	"github.com/thediveo/morbyd/v2/moby"
@@ -141,6 +143,55 @@ func (s *Session) Container(ctx context.Context, nameID string) (*Container, err
 		Details: details,
 	}
 	return cntr, nil
+}
+
+// MyContainer returns a *Container object if we're inside a container and we
+// can identify and locate our container; otherwise, it returns an error. Please
+// note that multiple calls will return different *Container objects.
+//
+// Please note that MyContainer works also correctly when inside a devcontainer
+// inside a Github codespace. In fact, MyContainer does not simply try to lookup
+// a container with the same name as our $HOSTNAME but instead sifts through all
+// containers to find the one that has its “hostname” configured as our
+// $HOSTNAME.
+func (s *Session) MyContainer(ctx context.Context) (*Container, error) {
+	info, err := os.Stat("/.dockerenv")
+	if os.IsNotExist(err) || !info.Mode().IsRegular() {
+		return nil, fmt.Errorf("not in a container: %w", errdefs.ErrNotFound)
+	}
+	hostname := os.Getenv("HOSTNAME")
+	return s.containerByHostname(ctx, hostname)
+}
+
+func (s *Session) containerByHostname(ctx context.Context, hostname string) (*Container, error) {
+	// try the lucky guess first, but check that a potential find has the
+	// correct hostname configured.
+	cntr, err := s.Container(ctx, hostname)
+	if err == nil && cntr.Details.Container.Config != nil && cntr.Details.Container.Config.Hostname == hostname {
+		return cntr, nil
+	}
+	// ...no way, let's go down through the looking glass (and mix metaphors)
+	cntrs, err := s.Client().ContainerList(ctx, client.ContainerListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	for _, cntr := range cntrs.Items {
+		details, err := s.Client().ContainerInspect(ctx, cntr.ID, client.ContainerInspectOptions{})
+		if err != nil || details.Container.Config == nil {
+			continue
+		}
+		if details.Container.Config.Hostname == hostname {
+			cntr := &Container{
+				Name:    details.Container.Name[1:],
+				ID:      details.Container.ID,
+				Session: s,
+				Details: details,
+			}
+			return cntr, nil
+		}
+	}
+	return nil, fmt.Errorf("cannot determine my own container from hostname %q: %w",
+		hostname, errdefs.ErrNotFound)
 }
 
 // Network returns a *Network object for the specified name or ID if it exists,

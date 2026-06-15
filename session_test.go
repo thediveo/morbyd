@@ -160,6 +160,42 @@ var _ = Describe("test sessions", func() {
 				Expect(c.Details).NotTo(BeZero())
 			})
 
+			Context("our own devcontainer", func() {
+
+				It("locates its own container", func(ctx context.Context) {
+					name := "abracadabra-und-fort-war-sie"
+					cntr := Successful(sess.Run(ctx, "busybox",
+						run.WithName(""),
+						run.WithHostname(name),
+						run.WithCommand("/bin/sh", "-c", "trap 'exit 1' TERM; while true; do sleep 1; done"),
+						run.WithAutoRemove(),
+						run.WithCombinedOutput(timestamper.New(GinkgoWriter))))
+					Expect(cntr.PID(ctx)).Error().NotTo(HaveOccurred())
+					it := Successful(sess.containerByHostname(ctx, name))
+					Expect(it).To(HaveField("Details.Container.Config.Hostname", name))
+					Expect(it.Details.Container.Name).NotTo(Equal(name))
+				})
+
+				It("locates its own dev container", func(ctx context.Context) {
+					if os.Getuid() != 0 {
+						Skip("needs root")
+					}
+
+					info, err := os.Stat("/.dockerenv")
+					if os.IsNotExist(err) || !info.Mode().IsRegular() {
+						Skip("needs to be in a (dev) container")
+					}
+					sess := Successful(NewSession(ctx,
+						session.WithDockerOpts(client.WithHost("unix:///proc/1/root/run/outer-docker.sock"))))
+					DeferCleanup(func(ctx context.Context) {
+						sess.Close(ctx)
+					})
+					cntr := Successful(sess.MyContainer(ctx))
+					Expect(cntr).NotTo(BeNil())
+				})
+
+			})
+
 		})
 
 		When("looking up networks", func() {

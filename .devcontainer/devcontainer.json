@@ -21,7 +21,7 @@
             "num-programs": "1",
             "race": true,
             "verbose": true,
-             "html": true
+            "html": true
         },
         "ghcr.io/thediveo/devcontainer-features/local-pkgsite:1": {
             "port": "16090"
@@ -31,6 +31,10 @@
             "moby": false // go for the upstream Docker-CE
         }
     },
+    "mounts": [
+        // just for the get my own devcontainer unit test...
+        "source=/run/docker.sock,target=/run/outer-docker.sock,type=bind"
+    ],
     "remoteEnv": {
         "GOPATH": "/home/vscode/go",
         "PATH": "/home/vscode/go/bin:/go/bin:/usr/local/go/bin:${localEnv:PATH}"
