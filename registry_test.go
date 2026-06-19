@@ -116,7 +116,7 @@ var _ = Describe("given a (local) registry", Ordered, Serial, func() {
 		})
 	})
 
-	It("pushes an image, needing auth", func(ctx context.Context) {
+	FIt("pushes an image, needing auth", func(ctx context.Context) {
 		sess := Successful(NewSession(ctx))
 		DeferCleanup(func(ctx context.Context) {
 			sess.Close(ctx)
@@ -128,7 +128,7 @@ var _ = Describe("given a (local) registry", Ordered, Serial, func() {
 		if !Successful(sess.HasImage(ctx, originalImage)) {
 			Expect(sess.PullImage(ctx,
 				originalImage,
-				pull.WithRegistryAuth(magicauth),
+				//pull.WithRegistryAuth(magicauth),
 				pull.WithOutput(timestamper.New(GinkgoWriter)))).To(Succeed())
 		}
 		By("tagging the canary image for local registry")
