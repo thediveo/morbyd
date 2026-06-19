@@ -116,7 +116,7 @@ var _ = Describe("given a (local) registry", Ordered, Serial, func() {
 		})
 	})
 
-	FIt("pushes an image, needing auth", func(ctx context.Context) {
+	It("pushes an image, needing auth", func(ctx context.Context) {
 		sess := Successful(NewSession(ctx))
 		DeferCleanup(func(ctx context.Context) {
 			sess.Close(ctx)
