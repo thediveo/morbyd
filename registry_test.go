@@ -128,7 +128,7 @@ var _ = Describe("given a (local) registry", Ordered, Serial, func() {
 		if !Successful(sess.HasImage(ctx, originalImage)) {
 			Expect(sess.PullImage(ctx,
 				originalImage,
-				pull.WithRegistryAuth(magicauth),
+				//pull.WithRegistryAuth(magicauth),
 				pull.WithOutput(timestamper.New(GinkgoWriter)))).To(Succeed())
 		}
 		By("tagging the canary image for local registry")

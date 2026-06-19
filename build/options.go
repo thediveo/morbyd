@@ -20,6 +20,7 @@ import (
 	"github.com/moby/moby/api/types/build"
 	"github.com/moby/moby/client"
 
+	"github.com/thediveo/morbyd/v2/internal/ensure"
 	lbls "github.com/thediveo/morbyd/v2/labels"
 )
 
@@ -57,9 +58,7 @@ func WithTag(nametag string) Opt {
 // “foo”. WithBuildArg can be specified multiple times.
 func WithBuildArg(barg string) Opt {
 	return func(o *Options) error {
-		if o.BuildArgs == nil {
-			o.BuildArgs = map[string]*string{}
-		}
+		ensure.Map(&o.BuildArgs)
 		return BuildArgs(o.BuildArgs).Add(barg)
 	}
 }
@@ -68,9 +67,7 @@ func WithBuildArg(barg string) Opt {
 // [WithBuildArg].
 func WithBuildArgs(bargs ...string) Opt {
 	return func(o *Options) error {
-		if o.BuildArgs == nil {
-			o.BuildArgs = map[string]*string{}
-		}
+		ensure.Map(&o.BuildArgs)
 		for _, barg := range bargs {
 			if err := BuildArgs(o.BuildArgs).Add(barg); err != nil {
 				return err
@@ -91,7 +88,7 @@ func WithDockerfile(name string) Opt {
 // WithLabel adds a key-value label to the built image.
 func WithLabel(label string) Opt {
 	return func(o *Options) error {
-		ensureLabelsMap(o)
+		ensure.Map(&o.Labels)
 		return lbls.Labels(o.Labels).Add(label)
 	}
 }
@@ -99,7 +96,7 @@ func WithLabel(label string) Opt {
 // WithLabels adds multiple key-value labels to the built image.
 func WithLabels(labels ...string) Opt {
 	return func(o *Options) error {
-		ensureLabelsMap(o)
+		ensure.Map(&o.Labels)
 		for _, label := range labels {
 			if err := lbls.Labels(o.Labels).Add(label); err != nil {
 				return err
@@ -107,15 +104,6 @@ func WithLabels(labels ...string) Opt {
 		}
 		return nil
 	}
-}
-
-// ensureLabelsMap is a helper to ensure that the Options.Labels map is
-// initialized.
-func ensureLabelsMap(o *Options) {
-	if o.Labels != nil {
-		return
-	}
-	o.Labels = map[string]string{}
 }
 
 // WithoutCache specifies to never use the cache when building the image.

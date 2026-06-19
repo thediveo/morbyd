@@ -16,7 +16,7 @@ package ensure
 
 // Map creates the map to which m points to, but only if it hasn't been created
 // already.
-func Map[K comparable, V any](m *map[K]V) {
+func Map[K comparable, V any, M ~map[K]V](m *M) {
 	if *m != nil {
 		return
 	}
