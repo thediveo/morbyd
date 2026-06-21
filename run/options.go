@@ -23,6 +23,7 @@ import (
 	"strconv"
 	"strings"
 
+	dockercliopts "github.com/docker/cli/opts"
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/api/types/mount"
 	"github.com/moby/moby/api/types/network"
@@ -31,7 +32,7 @@ import (
 	"github.com/thediveo/morbyd/v2/identity"
 	"github.com/thediveo/morbyd/v2/internal/ensure"
 	lbls "github.com/thediveo/morbyd/v2/labels"
-	"github.com/thediveo/morbyd/v2/run/dockercli"
+	"github.com/thediveo/morbyd/v2/run/internal/volumespec"
 	"github.com/thediveo/morbyd/v2/strukt"
 )
 
@@ -420,7 +421,7 @@ func reportPortMappingError(mapping string) (bindIP netip.Addr, hostPort uint16,
 //
 // [Volumes]: https://docs.docker.com/storage/volumes/
 func WithVolume(vol string) Opt {
-	parsedVol, err := dockercli.ParseVolume(vol)
+	parsedVol, err := volumespec.Parse(vol)
 	if err != nil {
 		return func(o *Options) error {
 			return fmt.Errorf("malformed WithVolume parameter %q, reason: %w",
@@ -477,7 +478,7 @@ func bindVolumeToBind(vol string) string {
 func WithMount(mnt string) Opt {
 	return func(o *Options) error {
 		// Let's do a dry run on this single parameter first...
-		dry := dockercli.MountOpt{}
+		dry := dockercliopts.MountOpt{}
 		if err := dry.Set(mnt); err != nil { // ...actually an "add"
 			return fmt.Errorf("invalid WithMount parameter, reason: %w",
 				err)
@@ -603,28 +604,15 @@ func WithConsoleSize(width, height uint) Opt {
 // configures the Linux kernel net namespace to use.
 func WithNetwork(netw string) Opt {
 	return func(o *Options) error {
-		dry := dockercli.NetworkOpt{}
+		dry := dockercliopts.NetworkOpt{}
 		if err := dry.Set(netw); err != nil {
 			return fmt.Errorf("malformed WithNetwork parameter %q, reason: %s",
 				netw, err)
 		}
 		ep := dry.Value()[0]
 		ensure.Value(&o.Opts.NetworkingConfig)
-		if o.Opts.NetworkingConfig.EndpointsConfig == nil {
-			o.Opts.NetworkingConfig.EndpointsConfig = map[string]*network.EndpointSettings{}
-		}
+		ensure.Map(&o.Opts.NetworkingConfig.EndpointsConfig)
 		var err error
-		var ipv4, ipv6 netip.Addr
-		if ep.IPv4Address != "" {
-			if ipv4, err = netip.ParseAddr(ep.IPv4Address); err != nil {
-				return fmt.Errorf("invalid IP address, reason: %s", err)
-			}
-		}
-		if ep.IPv6Address != "" {
-			if ipv6, err = netip.ParseAddr(ep.IPv6Address); err != nil {
-				return fmt.Errorf("invalid IPv6 address, reason: %s", err)
-			}
-		}
 		var mac net.HardwareAddr
 		if ep.MacAddress != "" {
 			if mac, err = net.ParseMAC(ep.MacAddress); err != nil {
@@ -636,8 +624,8 @@ func WithNetwork(netw string) Opt {
 			Aliases:           ep.Aliases,
 			DriverOpts:        ep.DriverOpts,
 			Links:             ep.Links,
-			IPAddress:         ipv4,
-			GlobalIPv6Address: ipv6, // TODO: clarify w. respect to GlobalIPv6PrefixLen
+			IPAddress:         ep.IPv4Address,
+			GlobalIPv6Address: ep.IPv6Address,
 			MacAddress:        network.HardwareAddr(mac),
 		}
 		return nil

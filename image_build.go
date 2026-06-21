@@ -135,7 +135,7 @@ func (s *Session) BuildImage(ctx context.Context, buildctxpath string, opts ...b
 			// anything other than nil, even if the context is cancelled or
 			// times out, of the session gets closed.
 			err := buildkitSession.Run(sessionCtx, func(ctx context.Context, proto string, meta map[string][]string) (net.Conn, error) {
-				return s.Client().(client.APIClient).DialHijack(ctx, "/session", proto, meta)
+				return s.Client().(client.HijackDialer).DialHijack(ctx, "/session", proto, meta)
 			})
 			if sessionCtx.Err() != nil && ctx.Err() == nil {
 				// if only our session was cancelled that is normal behavior, so
