@@ -17,7 +17,7 @@
         "ghcr.io/thediveo/devcontainer-features/pinact:0": {},
         "ghcr.io/thediveo/devcontainer-features/gocover:1": {
             "tags": "matchers",
-            "uncovered-packages": "github.com/thediveo/morbyd/v2/run/dockercli",
+            "uncovered-packages": "github.com/thediveo/morbyd/v2/run/internal/volumespec",
             "num-programs": "1",
             "race": true,
             "verbose": true,

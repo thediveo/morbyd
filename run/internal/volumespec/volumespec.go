@@ -1,24 +1,25 @@
-// Source: https://github.com/docker/cli/blob/v25.0.1/cli/compose/loader/volume.go
+// Source: https://github.com/docker/cli/blob/master/internal/volumespec/volumespec.go
 //
 // Apache License 2.0, https://github.com/docker/cli/blob/master/LICENSE
 
-package dockercli
+package volumespec
 
 import (
+	"errors"
+	"fmt"
 	"slices"
 	"strings"
 	"unicode"
 	"unicode/utf8"
 
 	"github.com/moby/moby/api/types/mount"
-	"github.com/pkg/errors"
 )
 
 const endOfSpec = rune(0)
 
-// ParseVolume parses a volume spec without any knowledge of the target platform
-func ParseVolume(spec string) (ServiceVolumeConfig, error) {
-	volume := ServiceVolumeConfig{}
+// Parse parses a volume spec without any knowledge of the target platform
+func Parse(spec string) (VolumeConfig, error) {
+	volume := VolumeConfig{}
 
 	switch len(spec) {
 	case 0:
@@ -29,7 +30,7 @@ func ParseVolume(spec string) (ServiceVolumeConfig, error) {
 		return volume, nil
 	}
 
-	buffer := []rune{}
+	buffer := make([]rune, 0, len(spec))
 	for _, char := range spec + string(endOfSpec) {
 		switch {
 		case isWindowsDrive(buffer, char):
@@ -37,9 +38,9 @@ func ParseVolume(spec string) (ServiceVolumeConfig, error) {
 		case char == ':' || char == endOfSpec:
 			if err := populateFieldFromBuffer(char, buffer, &volume); err != nil {
 				populateType(&volume)
-				return volume, errors.Wrapf(err, "invalid spec: %s", spec)
+				return volume, fmt.Errorf("invalid spec: %s: %w", spec, err)
 			}
-			buffer = []rune{}
+			buffer = buffer[:0] // reset, but reuse capacity
 		default:
 			buffer = append(buffer, char)
 		}
@@ -53,7 +54,7 @@ func isWindowsDrive(buffer []rune, char rune) bool {
 	return char == ':' && len(buffer) == 1 && unicode.IsLetter(buffer[0])
 }
 
-func populateFieldFromBuffer(char rune, buffer []rune, volume *ServiceVolumeConfig) error {
+func populateFieldFromBuffer(char rune, buffer []rune, volume *VolumeConfig) error {
 	strBuffer := string(buffer)
 	switch {
 	case len(buffer) == 0:
@@ -78,10 +79,10 @@ func populateFieldFromBuffer(char rune, buffer []rune, volume *ServiceVolumeConf
 		case "rw":
 			volume.ReadOnly = false
 		case "nocopy":
-			volume.Volume = &ServiceVolumeVolume{NoCopy: true}
+			volume.Volume = &VolumeOpts{NoCopy: true}
 		default:
 			if isBindOption(option) {
-				volume.Bind = &ServiceVolumeBind{Propagation: option}
+				volume.Bind = &BindOpts{Propagation: option}
 			}
 			// ignore unknown options
 		}
@@ -93,7 +94,7 @@ func isBindOption(option string) bool {
 	return slices.Contains(mount.Propagations, mount.Propagation(option))
 }
 
-func populateType(volume *ServiceVolumeConfig) {
+func populateType(volume *VolumeConfig) {
 	switch {
 	// Anonymous volume
 	case volume.Source == "":
