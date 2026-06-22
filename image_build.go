@@ -31,6 +31,7 @@ import (
 	bksession "github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/util/progress/progressui"
 	"github.com/moby/go-archive"
+	mobybuild "github.com/moby/moby/api/types/build"
 	"github.com/moby/moby/api/types/jsonstream"
 	"github.com/moby/moby/client"
 	"github.com/moby/moby/client/pkg/jsonmessage"
@@ -110,7 +111,7 @@ func (s *Session) BuildImage(ctx context.Context, buildctxpath string, opts ...b
 	})
 	defer closeStateCh()
 
-	if bios.Version == "2" {
+	if bios.Version == mobybuild.BuilderBuildKit {
 		// the caller foolishly requests BuildKit and now hell breaks loose. In
 		// order to build non-trivial Dockerfiles using the Docker
 		// daemon-integrated buildkit successfully we need to create a new
