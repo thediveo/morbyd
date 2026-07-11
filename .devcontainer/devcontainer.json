@@ -1,7 +1,7 @@
 {
     "name": "morbyd (docker-in-docker)",
     "portsAttributes": {
-        "16090": {
+        "6060": {
             "label": "morbyd package documentation",
             "onAutoForward": "notify",
             "protocol": "http"
@@ -11,7 +11,6 @@
     "features": {
         "ghcr.io/devcontainers/features/node:2": {},
         "ghcr.io/devcontainers/features/go:1": {},
-        "ghcr.io/thediveo/devcontainer-features/goreportcard:1": {},
         "ghcr.io/thediveo/devcontainer-features/go-mod-upgrade:1": {},
         "ghcr.io/thediveo/devcontainer-features/lazygit:0": {},
         "ghcr.io/thediveo/devcontainer-features/pinact:0": {},
@@ -24,9 +23,9 @@
             "html": true
         },
         "ghcr.io/thediveo/devcontainer-features/local-pkgsite:1": {
-            "port": "16090"
+            "port": "6060"
         },
-        "ghcr.io/devcontainers/features/docker-in-docker:3": {
+        "ghcr.io/devcontainers/features/docker-in-docker:4": {
             "version": "latest",
             "moby": false // go for the upstream Docker-CE
         }
