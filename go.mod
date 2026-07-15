@@ -14,18 +14,18 @@ require (
 	github.com/onsi/gomega v1.42.1
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/thediveo/fdooze v0.3.3
-	github.com/thediveo/nonstd v0.19.0
+	github.com/thediveo/nonstd v0.20.0
 	github.com/thediveo/safe v0.9.1
 	github.com/thediveo/success v1.3.1
 	go.uber.org/mock v0.6.0
 	golang.org/x/crypto v0.54.0
-	golang.org/x/sync v0.22.0
 	google.golang.org/protobuf v1.36.11
 )
 
 require (
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	golang.org/x/sync v0.22.0 // indirect
 )
 
 require (
