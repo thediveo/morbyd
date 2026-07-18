@@ -36,11 +36,22 @@ import (
 	"github.com/moby/moby/client"
 	"github.com/moby/moby/client/pkg/jsonmessage"
 	"github.com/moby/patternmatcher/ignorefile"
+	"github.com/thediveo/nonstd/prioerrgroup"
 	"github.com/thediveo/nonstd/xatomic"
-	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/thediveo/morbyd/v2/build"
+)
+
+// buildImageErrorPriority ranks the importance of image build sub task errors;
+// the numerically highest priority wins.
+type buildImageErrorPriority int
+
+// build image error ranking from highest to lowest...
+const (
+	displayStreamErrorPrio buildImageErrorPriority = -iota
+	sessionRunErrorPrio
+	bkdisplayErrorPrio
 )
 
 // BuildImage builds a container image using the specified build context and
@@ -94,15 +105,17 @@ func (s *Session) BuildImage(ctx context.Context, buildctxpath string, opts ...b
 		bios.Context = buildCtxTar
 	}
 
-	// We use an error wait group as in case of using buildkit we need to juggle
-	// with multiple concurrent tasks that might error out sooner or later and
-	// we need to then abort the other tasks; otherwise we have to wait for them
-	// to all properly wind down before we can return our result.
-	wg, ctx := errgroup.WithContext(ctx)
-	sessionCtx, sessionDone := context.WithCancel(ctx)
+	// We use a prioritized error wait group as in case of using buildkit we
+	// need to juggle with multiple concurrent tasks that might error out sooner
+	// or later and we need to then abort the other tasks; otherwise we have to
+	// wait for them to all properly wind down before we can return our result.
+	wg, wgctx := prioerrgroup.WithContext[buildImageErrorPriority](ctx)
+	// We need to be able to terminate the buildkit session go routine without
+	// cancelling the waitgroup context as part of ordinary successful operations.
+	sessionCtx, sessionDone := context.WithCancel(wgctx)
 	defer sessionDone()
 
-	var statech chan *bkclient.SolveStatus // only for BuildKit
+	var statech chan *bkclient.SolveStatus // only for BuildKit, otherwise nil
 	closeStateCh := sync.OnceFunc(func() {
 		if statech == nil {
 			return
@@ -122,7 +135,7 @@ func (s *Session) BuildImage(ctx context.Context, buildctxpath string, opts ...b
 		}
 		defer func() { _ = buildkitSession.Close() }()
 
-		wg.Go(func() error {
+		wg.Go(func() *prioerrgroup.PrioritizedError[buildImageErrorPriority] {
 			// Aaaaarghhhhh!!! This is one of those pitch-dark long-running
 			// function error reporting anti-pattern: in case the dialing fails,
 			// buildkit.Session.Run returns early with an error. Otherwise it
@@ -132,21 +145,26 @@ func (s *Session) BuildImage(ctx context.Context, buildctxpath string, opts ...b
 			// Where did I saw that anti-pattern before? Riiiight: the podman
 			// native API!
 			//
-			// When the session enters the real "run" phase it won't ever return
-			// anything other than nil, even if the context is cancelled or
-			// times out, of the session gets closed.
+			// At least, if the session enters the real "run" phase it won't
+			// ever return anything other than nil from that point on, even if
+			// its context is cancelled or times out, or the session gets
+			// closed.
 			err := buildkitSession.Run(sessionCtx, func(ctx context.Context, proto string, meta map[string][]string) (net.Conn, error) {
 				return s.Client().(client.HijackDialer).DialHijack(ctx, "/session", proto, meta)
 			})
-			if sessionCtx.Err() != nil && ctx.Err() == nil {
-				// if only our session was cancelled that is normal behavior, so
-				// we should not report this as an error as we would otherwise
-				// race with any other error return values from our waitgroup's
-				// concurrent go routines.
+			if sessionCtx.Err() != nil && wgctx.Err() == nil {
+				// if only our buildkit session was cancelled without the whole
+				// build process having been cancelled, that is then considered
+				// normal behavior. In this case we should not report this as an
+				// error as otherwise the waitgroup would return a spurious
+				// error.
 				return nil
 			}
-			return err // ...but report "early" errors.
+			// ...but otherwise report any "early" errors that prevented the
+			// buildkit session from "running".
+			return prioerrgroup.NewPrioritizedError(err, sessionRunErrorPrio)
 		})
+
 		bios.SessionID = buildkitSession.ID()
 		// of course, we want to leverage buildkit's client display and progress
 		// UI, instead of being a dilettante. (Or is this instead spelled
@@ -166,42 +184,41 @@ func (s *Session) BuildImage(ctx context.Context, buildctxpath string, opts ...b
 		}
 		statech = make(chan *bkclient.SolveStatus, 32)
 
-		wg.Go(func() error {
+		wg.Go(func() *prioerrgroup.PrioritizedError[buildImageErrorPriority] {
 			// UpdateFrom returns when either the state change channel has been
 			// closed and drained, or when our context was done/cancelled ...
 			// which happens when either one of the other go routines has failed
 			// returning an error, or the context passed to our BuildImage
 			// method has been done/cancelled.
-			warnings, err := bkdisplay.UpdateFrom(ctx, statech)
+			warnings, err := bkdisplay.UpdateFrom(wgctx, statech)
 			if err != nil {
-				return err
+				// this could be a genuine update error or otherwise a dependent
+				// context cancellation error; the later will be dropped in
+				// favor of the cancellation error from the (overall) build
+				// process.
+				return prioerrgroup.NewPrioritizedError(err, bkdisplayErrorPrio)
 			}
 			// If this was a clean return from UpdateFrom, then render the
 			// collected warnings, if any...
 			for _, warning := range warnings {
 				_, _ = bios.Out.Write([]byte(prettyPrintVertexWarning(warning)))
 			}
-			// ...and cancel our error waitgroup-derived sub context; now, as we
-			// can only be done after the state change channel has been closed
-			// there's only the above running buildkit session to terminate.
-			// However, please note that we're still racing with the finishing
-			// BuildImage/DisplayStream go routine returning any potential error
-			// result. However, as we are on the path to success we're returning
-			// a nil error and thus won't ever override the error return value
-			// from Build/ImageDisplayStream. That leaves the buildkit session
-			// go routine, so please see above.
+			// ...and cancel our error waitgroup-derived sub context to make any
+			// optional state channel processing go routine properly terminate.
 			sessionDone()
 			return nil
 		})
 	}
 
 	var idval xatomic.Value[string] // never tickle the race detector
-	wg.Go(func() error {
+	wg.Go(func() *prioerrgroup.PrioritizedError[buildImageErrorPriority] {
 		// Now initiate the image build, feeding it our tar(r)ed build context
 		// contents.
-		resp, err := s.moby.ImageBuild(ctx, bios.Context, bios.ImageBuildOptions)
+		resp, err := s.moby.ImageBuild(wgctx, bios.Context, bios.ImageBuildOptions)
 		if err != nil {
-			return fmt.Errorf("image build failed, reason: %w", err)
+			return prioerrgroup.NewPrioritizedError(
+				fmt.Errorf("image build failed, reason: %w", err),
+				displayStreamErrorPrio)
 		}
 		defer func() { _ = resp.Body.Close() }()
 		err = jsonmessage.DisplayStream(resp.Body, bios.Out,
@@ -241,7 +258,7 @@ func (s *Session) BuildImage(ctx context.Context, buildctxpath string, opts ...b
 				idval.Store(aux.ID)
 			}))
 		closeStateCh()
-		return err
+		return prioerrgroup.NewPrioritizedError(err, displayStreamErrorPrio)
 	})
 
 	err = wg.Wait()
