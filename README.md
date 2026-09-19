@@ -6,15 +6,15 @@
 [![License](https://img.shields.io/github/license/thediveo/morbyd)](https://img.shields.io/github/license/thediveo/morbyd)
 ![build and test](https://github.com/thediveo/morbyd/actions/workflows/buildandtest.yaml/badge.svg?branch=master)
 ![goroutines](https://img.shields.io/badge/go%20routines-not%20leaking-success)
-![Coverage](https://img.shields.io/badge/Coverage-96.6%25-brightgreen)
+![Coverage](https://img.shields.io/badge/Coverage-96.9%25-brightgreen)
 
 (Please see heading `v2` below for details of how to upgrade.)
 
-`morbyd/v2` is a thin layer on top of the standard Docker Go client(*) to easily
-build and run throw-away test Docker images and containers. And to easily run
-commands inside these containers.
+`morbyd/v2` is a thin layer on top of the standard Docker Go client(*) SDK to
+easily build and run throw-away test Docker images and containers. And to easily
+run commands inside these containers. The `docker` binary is not used.
 
-(*) Actually, as of `v2` this is technically now the moby Go client
+(*) Actually, as of `v2` this is technically now the moby Go client SDK
 `github.com/moby/moby/client`.
 
 In particular, `morbyd` hides the gory details of how to stream the output, and
